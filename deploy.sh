@@ -99,7 +99,7 @@ stop_app() {
 > "$LOG_FILE"
 log "INFO" "开始部署 $APP_NAME (纯后台运行版本)"
 
-TOTAL_STEPS=10  # 总步骤数
+TOTAL_STEPS=11  # 总步骤数
 current_step=0
 
 # 显示欢迎信息
@@ -172,6 +172,38 @@ log "INFO" "步骤 $current_step/$TOTAL_STEPS: 复制应用文件"
 # 复制应用文件
 cp -r $APP_DIR/* $DEPLOY_DIR/
 
+# 验证 server.js 和配置文件是否存在
+if [ ! -f "$DEPLOY_DIR/src/server.js" ]; then
+  log "ERROR" "找不到 server.js 文件，请检查源目录结构"
+  log "ERROR" "源目录内容:"
+  ls -l $APP_DIR/ >> "$LOG_FILE"
+  log "ERROR" "部署目录内容:"
+  ls -l $DEPLOY_DIR/ >> "$LOG_FILE"
+  echo -e "\n${RED}部署失败：找不到 server.js 文件${NC}"
+  exit 1
+fi
+
+if [ ! -f "$DEPLOY_DIR/config/default.json" ]; then
+  log "INFO" "配置文件不存在，创建默认配置..."
+  mkdir -p $DEPLOY_DIR/config
+  cat > "$DEPLOY_DIR/config/default.json" << EOF
+{
+  "database": {
+    "type": "json",
+    "path": "./data/fixtures.json"
+  },
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0"
+  },
+  "cache": {
+    "stdTTL": 300,
+    "checkperiod": 600
+  }
+}
+EOF
+fi
+
 # 确保必要目录存在
 mkdir -p $DEPLOY_DIR/public
 mkdir -p $DEPLOY_DIR/data
@@ -243,7 +275,38 @@ log "INFO" "步骤 $current_step/$TOTAL_STEPS: 停止现有应用"
 
 stop_app
 
-# 步骤9：启动应用服务（纯后台运行）
+# 步骤9：验证启动文件
+current_step=$((current_step + 1))
+show_progress $current_step $TOTAL_STEPS "验证启动文件..."
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 验证启动文件"
+
+# 再次确认 server.js 和配置文件存在
+if [ ! -f "$DEPLOY_DIR/src/server.js" ]; then
+  log "ERROR" "启动失败：找不到 server.js 文件"
+  log "ERROR" "部署目录内容:"
+  ls -l $DEPLOY_DIR/ >> "$LOG_FILE"
+  log "ERROR" "部署目录 src 内容:"
+  ls -l $DEPLOY_DIR/src/ >> "$LOG_FILE"
+  echo -e "\n${RED}启动失败：找不到 server.js 文件${NC}"
+  exit 1
+fi
+
+if [ ! -f "$DEPLOY_DIR/config/default.json" ]; then
+  log "ERROR" "启动失败：找不到配置文件 config/default.json"
+  log "ERROR" "部署目录 config 内容:"
+  ls -l $DEPLOY_DIR/config/ >> "$LOG_FILE"
+  echo -e "\n${RED}启动失败：找不到配置文件 config/default.json${NC}"
+  exit 1
+fi
+
+# 显示关键文件信息
+log "INFO" "server.js 文件信息:"
+ls -l "$DEPLOY_DIR/src/server.js"
+
+log "INFO" "配置文件信息:"
+ls -l "$DEPLOY_DIR/config/default.json"
+
+# 步骤10：启动应用服务（纯后台运行）
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "启动应用服务..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 启动应用服务"
@@ -260,12 +323,13 @@ if check_app_status; then
   log "INFO" "应用启动成功"
 else
   log "ERROR" "应用启动失败"
+  log "ERROR" "应用日志内容:"
   tail -n 50 $APP_LOG_FILE >> "$LOG_FILE"
   echo -e "\n${RED}应用启动失败，请查看日志：$APP_LOG_FILE${NC}"
   exit 1
 fi
 
-# 步骤10：配置开机自启（不依赖systemd）
+# 步骤11：配置开机自启（不依赖systemd）
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "配置开机自启..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置开机自启"
@@ -337,7 +401,7 @@ else
   log "WARN" "无法配置开机自启，请手动添加到 rc.local 或等效文件"
 fi
 
-# 步骤11：部署完成
+# 步骤12：部署完成
 echo -e "\n\n${GREEN}=====================================${NC}"
 echo -e "${GREEN}       $APP_NAME 部署成功!       ${NC}"
 echo -e "${GREEN}=====================================${NC}"

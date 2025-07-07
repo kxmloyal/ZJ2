@@ -312,7 +312,6 @@ function initModals() {
   editForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
-    // 获取表单数据
     const fixtureId = document.getElementById('editFixtureId').value;
     const formData = {
       type: document.getElementById('editFixtureType').value,
@@ -329,320 +328,109 @@ function initModals() {
   });
   
   // 删除确认模态框
-  const deleteModal = document.getElementById('deleteConfirmModal');
-  const closeDeleteButton = document.getElementById('cancelDelete');
-  const confirmDeleteButton = document.getElementById('confirmDelete');
+  const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+  const closeDeleteConfirmButton = document.getElementById('closeDeleteConfirmModal');
+  const cancelDeleteButton = document.getElementById('cancelDeleteFixture');
+  const confirmDeleteButton = document.getElementById('confirmDeleteFixture');
   
-  // 关闭删除模态框
-  closeDeleteButton.addEventListener('click', () => {
-    deleteModal.classList.add('hidden');
+  // 关闭删除确认模态框
+  closeDeleteConfirmButton.addEventListener('click', () => {
+    deleteConfirmModal.classList.add('hidden');
   });
   
-  // 点击模态框外部关闭
-  deleteModal.addEventListener('click', (e) => {
-    if (e.target === deleteModal) {
-      deleteModal.classList.add('hidden');
-    }
+  cancelDeleteButton.addEventListener('click', () => {
+    deleteConfirmModal.classList.add('hidden');
   });
   
   // 确认删除
   confirmDeleteButton.addEventListener('click', () => {
-    const fixtureId = document.getElementById('deleteFixtureId').value;
+    const fixtureId = JigState.selectedFixtures[0];
     deleteFixture(fixtureId);
-    deleteModal.classList.add('hidden');
+    deleteConfirmModal.classList.add('hidden');
   });
-}
-
-// 打开编辑模态框
-function openEditModal(fixtureId) {
-  const fixture = JigState.fixtures.find(f => f.id === fixtureId);
-  if (!fixture) return;
-  
-  // 填充表单数据
-  document.getElementById('editFixtureId').value = fixture.id;
-  document.getElementById('editFixtureIdDisplay').value = fixture.id;
-  document.getElementById('editFixtureType').value = fixture.type;
-  document.getElementById('editFixtureCapacity').value = fixture.capacity;
-  document.getElementById('editFixtureSchedule').value = fixture.schedule;
-  document.getElementById('editFixtureLocation').value = fixture.location || '';
-  document.getElementById('editFixtureStatus').value = fixture.status;
-  document.getElementById('editFixtureDescription').value = fixture.description || '';
-  
-  // 显示模态框
-  document.getElementById('editFixtureModal').classList.remove('hidden');
-}
-
-// 打开删除模态框
-function openDeleteModal(fixtureId) {
-  const fixture = JigState.fixtures.find(f => f.id === fixtureId);
-  if (!fixture) return;
-  
-  // 设置要删除的ID
-  document.getElementById('deleteFixtureId').value = fixtureId;
-  
-  // 更新确认消息
-  document.getElementById('deleteConfirmMessage').textContent = 
-    `您确定要删除治具 ${fixture.id}（${fixture.type}）吗？此操作无法撤销。`;
-  
-  // 显示模态框
-  document.getElementById('deleteConfirmModal').classList.remove('hidden');
 }
 
 // 初始化筛选功能
 function initFilters() {
-  // 搜索框筛选
   const searchInput = document.getElementById('fixtureSearch');
-  searchInput.addEventListener('input', function() {
-    JigState.filters.search = this.value.toLowerCase();
-    JigState.currentPage = 1; // 重置到第一页
-    applyFilters();
-  });
-  
-  // 状态筛选
   const statusFilter = document.getElementById('fixtureFilter');
-  statusFilter.addEventListener('change', function() {
-    JigState.filters.status = this.value;
-    JigState.currentPage = 1; // 重置到第一页
+  const typeFilter = document.getElementById('fixtureTypeFilter');
+  
+  searchInput.addEventListener('input', () => {
+    JigState.filters.search = searchInput.value;
     applyFilters();
   });
   
-  // 类型筛选
-  const typeFilter = document.getElementById('fixtureTypeFilter');
-  typeFilter.addEventListener('change', function() {
-    JigState.filters.type = this.value;
-    JigState.currentPage = 1; // 重置到第一页
+  statusFilter.addEventListener('change', () => {
+    JigState.filters.status = statusFilter.value;
     applyFilters();
   });
   
-  // 全选复选框
-  const selectAllCheckbox = document.getElementById('selectAllFixtures');
-  selectAllCheckbox.addEventListener('change', function() {
-    if (this.checked) {
-      // 全选当前页的治具
-      JigState.selectedFixtures = JigState.filteredFixtures.map(fixture => fixture.id);
-    } else {
-      // 取消全选
-      JigState.selectedFixtures = [];
-    }
-    
-    // 更新复选框状态
-    updateCheckboxStates();
-    // 更新批量操作按钮状态
-    updateBatchOperationsStatus();
+  typeFilter.addEventListener('change', () => {
+    JigState.filters.type = typeFilter.value;
+    applyFilters();
   });
-}
-
-// 填充类型筛选下拉框
-function populateTypeFilter() {
-  const typeFilter = document.getElementById('fixtureTypeFilter');
-  const types = [...new Set(JigState.fixtures.map(fixture => fixture.type))];
-  
-  // 保存当前选中值
-  const currentValue = typeFilter.value;
-  
-  // 清除现有选项（保留"全部类型"）
-  while (typeFilter.options.length > 1) {
-    typeFilter.remove(1);
-  }
-  
-  // 添加类型选项
-  types.forEach(type => {
-    const option = document.createElement('option');
-    option.value = type;
-    option.textContent = type;
-    typeFilter.appendChild(option);
-  });
-  
-  // 恢复选中值
-  if (types.includes(currentValue)) {
-    typeFilter.value = currentValue;
-  } else {
-    typeFilter.value = 'all';
-  }
-}
-
-// 应用筛选条件
-function applyFilters() {
-  const { fixtures, filters } = JigState;
-  
-  // 应用筛选
-  let filtered = [...fixtures];
-  
-  // 状态筛选
-  if (filters.status !== 'all') {
-    filtered = filtered.filter(fixture => fixture.status === filters.status);
-  }
-  
-  // 类型筛选
-  if (filters.type !== 'all') {
-    filtered = filtered.filter(fixture => fixture.type === filters.type);
-  }
-  
-  // 搜索筛选
-  if (filters.search) {
-    const searchTerm = filters.search.toLowerCase();
-    filtered = filtered.filter(fixture => 
-      fixture.id.toLowerCase().includes(searchTerm) || 
-      fixture.type.toLowerCase().includes(searchTerm) ||
-      (fixture.location && fixture.location.toLowerCase().includes(searchTerm))
-    );
-  }
-  
-  // 更新筛选后的列表
-  JigState.filteredFixtures = filtered;
-  
-  // 重新渲染表格
-  renderFixturesTable();
-  // 更新分页控件
-  updatePagination();
 }
 
 // 初始化分页功能
 function initPagination() {
-  // 上一页按钮
-  document.getElementById('prevPageBtn').addEventListener('click', () => {
+  const prevPageBtn = document.getElementById('prevPageBtn');
+  const nextPageBtn = document.getElementById('nextPageBtn');
+  
+  prevPageBtn.addEventListener('click', () => {
     if (JigState.currentPage > 1) {
       JigState.currentPage--;
       renderFixturesTable();
-      updatePagination();
     }
   });
   
-  // 下一页按钮
-  document.getElementById('nextPageBtn').addEventListener('click', () => {
-    const totalPages = getTotalPages();
-    if (JigState.currentPage < totalPages) {
+  nextPageBtn.addEventListener('click', () => {
+    const { filteredFixtures, currentPage, itemsPerPage } = JigState;
+    const totalPages = Math.ceil(filteredFixtures.length / itemsPerPage);
+    if (currentPage < totalPages) {
       JigState.currentPage++;
       renderFixturesTable();
-      updatePagination();
     }
   });
-}
-
-// 更新分页控件
-function updatePagination() {
-  const totalPages = getTotalPages();
-  const paginationContainer = document.getElementById('paginationNumbers');
-  
-  // 清空现有页码
-  paginationContainer.innerHTML = '';
-  
-  // 计算显示的页码范围
-  let startPage = Math.max(1, JigState.currentPage - 2);
-  let endPage = Math.min(totalPages, startPage + 4);
-  
-  // 调整范围，确保显示5个页码
-  if (endPage - startPage < 4 && totalPages >= 5) {
-    startPage = Math.max(1, endPage - 4);
-  }
-  
-  // 添加页码按钮
-  for (let i = startPage; i <= endPage; i++) {
-    const button = document.createElement('button');
-    button.className = `relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium pagination-number ${i === JigState.currentPage ? 'z-10 bg-primary text-white border-primary' : 'bg-white text-gray-700 hover:bg-gray-50'}`;
-    button.textContent = i;
-    button.setAttribute('data-page', i);
-    
-    button.addEventListener('click', () => {
-      JigState.currentPage = i;
-      renderFixturesTable();
-      updatePagination();
-    });
-    
-    paginationContainer.appendChild(button);
-  }
-  
-  // 更新按钮状态
-  document.getElementById('prevPageBtn').classList.toggle('opacity-50', JigState.currentPage === 1);
-  document.getElementById('nextPageBtn').classList.toggle('opacity-50', JigState.currentPage === totalPages);
-}
-
-// 获取总页数
-function getTotalPages() {
-  return Math.ceil(JigState.filteredFixtures.length / JigState.itemsPerPage);
 }
 
 // 初始化批量操作
 function initBatchOperations() {
-  const batchButton = document.getElementById('batchOperationsBtn');
-  const batchMenu = document.getElementById('batchOperationsMenu');
+  const batchOperationsBtn = document.getElementById('batchOperationsBtn');
+  const batchOperationsMenu = document.getElementById('batchOperationsMenu');
+  const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+  const batchExportBtn = document.getElementById('batchExportBtn');
+  const batchMaintenanceBtn = document.getElementById('batchMaintenanceBtn');
   
-  // 切换批量操作菜单
-  batchButton.addEventListener('click', (e) => {
-    e.stopPropagation();
-    batchMenu.classList.toggle('hidden');
+  batchOperationsBtn.addEventListener('click', () => {
+    batchOperationsMenu.classList.toggle('hidden');
   });
   
-  // 点击其他地方关闭菜单
-  document.addEventListener('click', () => {
-    batchMenu.classList.add('hidden');
+  batchDeleteBtn.addEventListener('click', () => {
+    if (JigState.selectedFixtures.length > 0) {
+      openDeleteConfirmModal();
+    }
   });
   
-  // 批量删除
-  document.getElementById('batchDeleteBtn').addEventListener('click', () => {
-    batchMenu.classList.add('hidden');
-    
-    if (JigState.selectedFixtures.length === 0) return;
-    
-    // 更新确认消息
-    document.getElementById('deleteConfirmMessage').textContent = 
-      `您确定要删除选中的 ${JigState.selectedFixtures.length} 个治具吗？此操作无法撤销。`;
-    
-    // 设置要删除的ID（用逗号分隔表示批量删除）
-    document.getElementById('deleteFixtureId').value = JigState.selectedFixtures.join(',');
-    
-    // 显示模态框
-    document.getElementById('deleteConfirmModal').classList.remove('hidden');
+  batchExportBtn.addEventListener('click', () => {
+    if (JigState.selectedFixtures.length > 0) {
+      const selectedFixtures = JigState.fixtures.filter(fixture => JigState.selectedFixtures.includes(fixture.id));
+      exportFixtures(selectedFixtures);
+    }
   });
   
-  // 批量导出
-  document.getElementById('batchExportBtn').addEventListener('click', () => {
-    batchMenu.classList.add('hidden');
-    exportSelectedFixtures();
+  batchMaintenanceBtn.addEventListener('click', () => {
+    if (JigState.selectedFixtures.length > 0) {
+      JigState.selectedFixtures.forEach(fixtureId => {
+        changeFixtureStatus(fixtureId, 'maintenance');
+      });
+      showNotification('操作成功', '选中的治具已标记为维护中');
+    }
   });
   
-  // 批量标记为维护中
-  document.getElementById('batchMaintenanceBtn').addEventListener('click', () => {
-    batchMenu.classList.add('hidden');
-    batchSetMaintenanceStatus();
-  });
-  
-  // 全选按钮状态更新
-  updateSelectAllStatus();
-  // 批量操作按钮状态更新
-  updateBatchOperationsStatus();
-}
-
-// 更新全选按钮状态
-function updateSelectAllStatus() {
-  const visibleCount = JigState.filteredFixtures.length;
-  const selectedCount = JigState.selectedFixtures.length;
-  
-  const selectAllCheckbox = document.getElementById('selectAllFixtures');
-  selectAllCheckbox.checked = visibleCount > 0 && selectedCount === visibleCount;
-  selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < visibleCount;
-}
-
-// 更新复选框状态
-function updateCheckboxStates() {
-  document.querySelectorAll('.fixture-checkbox').forEach(checkbox => {
-    const fixtureId = checkbox.getAttribute('data-id');
-    checkbox.checked = JigState.selectedFixtures.includes(fixtureId);
-  });
-}
-
-// 更新批量操作按钮状态
-function updateBatchOperationsStatus() {
-  const hasSelection = JigState.selectedFixtures.length > 0;
-  const batchButtons = document.querySelectorAll('#batchOperationsMenu button');
-  
-  batchButtons.forEach(button => {
-    if (hasSelection) {
-      button.classList.remove('opacity-50', 'cursor-not-allowed');
-      button.removeAttribute('disabled');
-    } else {
-      button.classList.add('opacity-50', 'cursor-not-allowed');
-      button.setAttribute('disabled', 'disabled');
+  document.addEventListener('click', (event) => {
+    if (!batchOperationsBtn.contains(event.target) && !batchOperationsMenu.contains(event.target)) {
+      batchOperationsMenu.classList.add('hidden');
     }
   });
 }
@@ -650,463 +438,244 @@ function updateBatchOperationsStatus() {
 // 初始化导入功能
 function initImportFunctionality() {
   const importFileInput = document.getElementById('importFile');
-  const importModal = document.getElementById('importConfirmModal');
-  const importFileInfo = document.getElementById('importFileInfo');
-  const importFileName = document.getElementById('importFileName');
-  const importFileSize = document.getElementById('importFileSize');
-  const removeImportFileBtn = document.getElementById('removeImportFile');
-  const confirmImportBtn = document.getElementById('confirmImport');
-  const closeImportBtn = document.getElementById('closeImportModal');
-  const cancelImportBtn = document.getElementById('cancelImport');
   
-  // 打开导入模态框
   importFileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-      const file = e.target.files[0];
-      if (file.type === 'application/json' || file.name.endsWith('.json')) {
-        // 显示文件信息
-        importFileName.textContent = file.name;
-        importFileSize.textContent = formatFileSize(file.size);
-        importFileInfo.classList.remove('hidden');
-        
-        // 启用导入按钮
-        confirmImportBtn.removeAttribute('disabled');
-        
-        // 显示模态框
-        importModal.classList.remove('hidden');
-      } else {
-        showNotification('错误', '请上传JSON格式的文件', 'error');
-        importFileInput.value = '';
-      }
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          importFixtures(data);
+        } catch (error) {
+          showNotification('导入失败', '文件格式不正确，请上传有效的JSON文件');
+        }
+      };
+      reader.readAsText(file);
     }
   });
-  
-  // 移除选中文件
-  removeImportFileBtn.addEventListener('click', () => {
-    importFileInput.value = '';
-    importFileInfo.classList.add('hidden');
-    confirmImportBtn.setAttribute('disabled', 'disabled');
-  });
-  
-  // 关闭导入模态框
-  closeImportBtn.addEventListener('click', () => {
-    importModal.classList.add('hidden');
-    importFileInput.value = '';
-    importFileInfo.classList.add('hidden');
-    confirmImportBtn.setAttribute('disabled', 'disabled');
-  });
-  
-  cancelImportBtn.addEventListener('click', () => {
-    importModal.classList.add('hidden');
-    importFileInput.value = '';
-    importFileInfo.classList.add('hidden');
-    confirmImportBtn.setAttribute('disabled', 'disabled');
-  });
-  
-  // 点击模态框外部关闭
-  importModal.addEventListener('click', (e) => {
-    if (e.target === importModal) {
-      importModal.classList.add('hidden');
-      importFileInput.value = '';
-      importFileInfo.classList.add('hidden');
-      confirmImportBtn.setAttribute('disabled', 'disabled');
-    }
-  });
-  
-  // 确认导入
-  confirmImportBtn.addEventListener('click', () => {
-    const file = importFileInput.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        const importedData = JSON.parse(e.target.result);
-        
-        if (!Array.isArray(importedData)) {
-          throw new Error('导入的数据必须是数组格式');
-        }
-        
-        // 获取导入模式
-        const importMode = document.querySelector('input[name="importMode"]:checked').value;
-        
-        // 处理导入数据
-        processImportedData(importedData, importMode);
-        
-        // 关闭模态框并重置
-        importModal.classList.add('hidden');
-        importFileInput.value = '';
-        importFileInfo.classList.add('hidden');
-        confirmImportBtn.setAttribute('disabled', 'disabled');
-        
-        // 显示成功通知
-        showNotification('导入成功', `成功导入 ${importedData.length} 个治具数据`, 'success');
-      } catch (error) {
-        showNotification('导入失败', `解析文件时出错: ${error.message}`, 'error');
-      }
-    };
-    reader.readAsText(file);
-  });
-}
-
-// 处理导入的数据
-function processImportedData(importedData, mode) {
-  // 过滤有效的治具数据
-  const validData = importedData.filter(item => 
-    item.id && item.type && typeof item.capacity === 'number' && typeof item.schedule === 'number'
-  );
-  
-  // 根据导入模式处理数据
-  switch (mode) {
-    case 'replace':
-      // 替换现有数据
-      JigState.fixtures = validData;
-      break;
-      
-    case 'merge':
-      // 合并数据（存在则更新，不存在则添加）
-      validData.forEach(newItem => {
-        const existingIndex = JigState.fixtures.findIndex(item => item.id === newItem.id);
-        if (existingIndex >= 0) {
-          // 更新现有项
-          JigState.fixtures[existingIndex] = {
-            ...JigState.fixtures[existingIndex],
-            ...newItem,
-            updatedAt: new Date().toISOString()
-          };
-        } else {
-          // 添加新项
-          JigState.fixtures.push({
-            ...newItem,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-      });
-      break;
-      
-    case 'ignore':
-      // 忽略已有数据（只添加新数据）
-      validData.forEach(newItem => {
-        const exists = JigState.fixtures.some(item => item.id === newItem.id);
-        if (!exists) {
-          JigState.fixtures.push({
-            ...newItem,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-      });
-      break;
-  }
-  
-  // 重置状态并重新加载
-  JigState.selectedFixtures = [];
-  JigState.currentPage = 1;
-  applyFilters();
-  populateTypeFilter();
-  renderFixturesTable();
-  updatePagination();
 }
 
 // 初始化导出功能
 function initExportFunctionality() {
-  const exportButton = document.getElementById('exportFixturesBtn');
-  exportButton.addEventListener('click', () => {
-    exportAllFixtures();
+  const exportFixturesBtn = document.getElementById('exportFixturesBtn');
+  
+  exportFixturesBtn.addEventListener('click', () => {
+    exportFixtures(JigState.fixtures);
   });
 }
 
-// 导出所有治具
-function exportAllFixtures() {
-  // 准备导出数据（只包含必要字段）
-  const exportData = JigState.fixtures.map(fixture => ({
-    id: fixture.id,
-    type: fixture.type,
-    capacity: fixture.capacity,
-    schedule: fixture.schedule,
-    location: fixture.location || '',
-    status: fixture.status,
-    description: fixture.description || ''
-  }));
+// 应用筛选条件
+function applyFilters() {
+  const { status, type, search } = JigState.filters;
   
-  downloadJsonFile(exportData, `fixtures-export-${new Date().toISOString().slice(0,10)}.json`);
+  JigState.filteredFixtures = JigState.fixtures.filter(fixture => {
+    const statusMatch = status === 'all' || fixture.status === status;
+    const typeMatch = type === 'all' || fixture.type === type;
+    const searchMatch = search === '' || fixture.id.includes(search) || fixture.type.includes(search);
+    
+    return statusMatch && typeMatch && searchMatch;
+  });
+  
+  JigState.currentPage = 1;
+  renderFixturesTable();
+  updatePaginationButtons();
 }
 
-// 导出选中的治具
-function exportSelectedFixtures() {
-  if (JigState.selectedFixtures.length === 0) return;
+// 更新类型筛选下拉框
+function populateTypeFilter() {
+  const typeFilter = document.getElementById('fixtureTypeFilter');
+  const types = [];
   
-  // 准备导出数据
-  const exportData = JigState.fixtures
-    .filter(fixture => JigState.selectedFixtures.includes(fixture.id))
-    .map(fixture => ({
-      id: fixture.id,
-      type: fixture.type,
-      capacity: fixture.capacity,
-      schedule: fixture.schedule,
-      location: fixture.location || '',
-      status: fixture.status,
-      description: fixture.description || ''
-    }));
+  JigState.fixtures.forEach(fixture => {
+    if (!types.includes(fixture.type)) {
+      types.push(fixture.type);
+    }
+  });
   
-  downloadJsonFile(exportData, `fixtures-selected-${new Date().toISOString().slice(0,10)}.json`);
+  types.sort().forEach(type => {
+    const option = document.createElement('option');
+    option.value = type;
+    option.textContent = type;
+    typeFilter.appendChild(option);
+  });
 }
 
-// 下载JSON文件
-function downloadJsonFile(data, filename) {
-  const jsonString = JSON.stringify(data, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+// 更新全选状态
+function updateSelectAllStatus() {
+  const selectAllCheckbox = document.getElementById('selectAllFixtures');
+  const fixtureCheckboxes = document.querySelectorAll('.fixture-checkbox');
   
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
+  JigState.isSelectAll = fixtureCheckboxes.length > 0 && Array.from(fixtureCheckboxes).every(checkbox => checkbox.checked);
+  selectAllCheckbox.checked = JigState.isSelectAll;
   
-  // 清理
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 0);
-  
-  showNotification('导出成功', `已导出 ${data.length} 个治具数据`, 'success');
+  // 更新批量操作按钮状态
+  updateBatchOperationsStatus();
 }
 
-// 显示通知
-function showNotification(title, message, type = 'success') {
-  const notification = document.getElementById('notification');
-  const notificationTitle = document.getElementById('notificationTitle');
-  const notificationMessage = document.getElementById('notificationMessage');
-  const notificationIcon = document.getElementById('notificationIcon');
+// 更新批量操作按钮状态
+function updateBatchOperationsStatus() {
+  const batchOperationsBtn = document.getElementById('batchOperationsBtn');
+  const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+  const batchExportBtn = document.getElementById('batchExportBtn');
+  const batchMaintenanceBtn = document.getElementById('batchMaintenanceBtn');
   
-  // 设置通知内容
-  notificationTitle.textContent = title;
-  notificationMessage.textContent = message;
-  
-  // 设置图标
-  notificationIcon.className = '';
-  if (type === 'success') {
-    notificationIcon.className = 'flex-shrink-0 text-success';
-    notificationIcon.innerHTML = '<i class="fa fa-check-circle text-xl"></i>';
-  } else if (type === 'error') {
-    notificationIcon.className = 'flex-shrink-0 text-danger';
-    notificationIcon.innerHTML = '<i class="fa fa-exclamation-circle text-xl"></i>';
-  } else if (type === 'warning') {
-    notificationIcon.className = 'flex-shrink-0 text-warning';
-    notificationIcon.innerHTML = '<i class="fa fa-exclamation-triangle text-xl"></i>';
-  } else if (type === 'info') {
-    notificationIcon.className = 'flex-shrink-0 text-primary';
-    notificationIcon.innerHTML = '<i class="fa fa-info-circle text-xl"></i>';
+  if (JigState.selectedFixtures.length > 0) {
+    batchOperationsBtn.disabled = false;
+    batchDeleteBtn.disabled = false;
+    batchExportBtn.disabled = false;
+    batchMaintenanceBtn.disabled = false;
+  } else {
+    batchOperationsBtn.disabled = true;
+    batchDeleteBtn.disabled = true;
+    batchExportBtn.disabled = true;
+    batchMaintenanceBtn.disabled = true;
+  }
+}
+
+// 查看治具详情
+function viewFixtureDetails(fixtureId) {
+  const fixture = JigState.fixtures.find(f => f.id === fixtureId);
+  if (fixture) {
+    // 这里可以实现查看详情的具体逻辑，例如弹出模态框显示详情
+    console.log('查看治具详情:', fixture);
+  }
+}
+
+// 打开编辑模态框
+function openEditModal(fixtureId) {
+  const fixture = JigState.fixtures.find(f => f.id === fixtureId);
+  if (fixture) {
+    const editModal = document.getElementById('editFixtureModal');
+    const editFixtureId = document.getElementById('editFixtureId');
+    const editFixtureIdDisplay = document.getElementById('editFixtureIdDisplay');
+    const editFixtureType = document.getElementById('editFixtureType');
+    const editFixtureCapacity = document.getElementById('editFixtureCapacity');
+    const editFixtureSchedule = document.getElementById('editFixtureSchedule');
+    const editFixtureLocation = document.getElementById('editFixtureLocation');
+    const editFixtureStatus = document.getElementById('editFixtureStatus');
+    const editFixtureDescription = document.getElementById('editFixtureDescription');
+    
+    editFixtureId.value = fixture.id;
+    editFixtureIdDisplay.value = fixture.id;
+    editFixtureType.value = fixture.type;
+    editFixtureCapacity.value = fixture.capacity;
+    editFixtureSchedule.value = fixture.schedule;
+    editFixtureLocation.value = fixture.location;
+    editFixtureStatus.value = fixture.status;
+    editFixtureDescription.value = fixture.description;
+    
+    editModal.classList.remove('hidden');
+  }
+}
+
+// 打开删除模态框
+function openDeleteModal(fixtureId) {
+  JigState.selectedFixtures = [fixtureId];
+  const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+  deleteConfirmModal.classList.remove('hidden');
+}
+
+// 打开删除确认模态框
+function openDeleteConfirmModal() {
+  const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+  deleteConfirmModal.classList.remove('hidden');
+}
+
+// 更改治具状态
+function changeFixtureStatus(fixtureId, currentStatus) {
+  let newStatus = '';
+  if (currentStatus === 'normal') {
+    newStatus = 'maintenance';
+  } else if (currentStatus === 'maintenance') {
+    newStatus = 'normal';
   }
   
-  // 显示通知
-  notification.classList.remove('hidden');
-  notification.classList.add('fade-in');
-  
-  // 3秒后自动关闭
-  setTimeout(() => {
-    notification.classList.add('hidden');
-  }, 3000);
-  
-  // 手动关闭按钮
-  document.getElementById('closeNotification').addEventListener('click', () => {
-    notification.classList.add('hidden');
+  DataService.updateFixture(fixtureId, { status: newStatus }).then(() => {
+    loadFixturesList();
+    showNotification('操作成功', '治具状态已更新');
+  }).catch(error => {
+    showNotification('操作失败', '更新治具状态时出现错误');
+    console.error('更新治具状态失败:', error);
   });
 }
 
 // 添加治具
 function addFixture(data) {
-  // 检查ID是否已存在
-  const idExists = JigState.fixtures.some(fixture => fixture.id === data.id);
-  if (idExists) {
-    showNotification('添加失败', `治具编号 ${data.id} 已存在`, 'error');
-    return;
-  }
-  
-  // 添加新治具
-  const newFixture = {
-    ...data,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  JigState.fixtures.push(newFixture);
-  
-  // 刷新列表
-  applyFilters();
-  populateTypeFilter();
-  renderFixturesTable();
-  updatePagination();
-  
-  showNotification('添加成功', `已成功添加治具 ${data.id}`, 'success');
+  DataService.addFixture(data).then(() => {
+    loadFixturesList();
+    showNotification('操作成功', '治具已成功添加');
+  }).catch(error => {
+    showNotification('操作失败', '添加治具时出现错误');
+    console.error('添加治具失败:', error);
+  });
 }
 
 // 更新治具
 function updateFixture(id, data) {
-  const index = JigState.fixtures.findIndex(fixture => fixture.id === id);
-  if (index === -1) {
-    showNotification('更新失败', '未找到指定治具', 'error');
-    return;
-  }
-  
-  // 更新治具数据
-  JigState.fixtures[index] = {
-    ...JigState.fixtures[index],
-    ...data,
-    updatedAt: new Date().toISOString()
-  };
-  
-  // 刷新列表
-  applyFilters();
-  populateTypeFilter();
-  renderFixturesTable();
-  
-  showNotification('更新成功', `已成功更新治具 ${id}`, 'success');
+  DataService.updateFixture(id, data).then(() => {
+    loadFixturesList();
+    showNotification('操作成功', '治具信息已更新');
+  }).catch(error => {
+    showNotification('操作失败', '更新治具信息时出现错误');
+    console.error('更新治具信息失败:', error);
+  });
 }
 
 // 删除治具
 function deleteFixture(id) {
-  // 检查是否是批量删除
-  const isBatch = id.includes(',');
-  
-  if (isBatch) {
-    const idsToDelete = id.split(',');
-    JigState.fixtures = JigState.fixtures.filter(fixture => !idsToDelete.includes(fixture.id));
+  DataService.deleteFixture(id).then(() => {
     JigState.selectedFixtures = [];
-    showNotification('删除成功', `已成功删除 ${idsToDelete.length} 个治具`, 'success');
-  } else {
-    JigState.fixtures = JigState.fixtures.filter(fixture => fixture.id !== id);
-    showNotification('删除成功', `已成功删除治具 ${id}`, 'success');
-  }
-  
-  // 刷新列表
-  applyFilters();
-  populateTypeFilter();
-  renderFixturesTable();
-  updatePagination();
-  updateSelectAllStatus();
-  updateBatchOperationsStatus();
+    loadFixturesList();
+    showNotification('操作成功', '治具已成功删除');
+  }).catch(error => {
+    showNotification('操作失败', '删除治具时出现错误');
+    console.error('删除治具失败:', error);
+  });
 }
 
-// 改变治具状态
-function changeFixtureStatus(fixtureId, currentStatus) {
-  const fixture = JigState.fixtures.find(f => f.id === fixtureId);
-  if (!fixture) return;
-  
-  // 确定新状态（循环切换）
-  let newStatus;
-  if (currentStatus === 'normal') {
-    newStatus = 'overloaded';
-  } else if (currentStatus === 'overloaded') {
-    newStatus = 'maintenance';
-  } else {
-    newStatus = 'normal';
-  }
-  
-  // 更新状态文本映射
-  const statusTextMap = {
-    'normal': '正常',
-    'overloaded': '超载',
-    'maintenance': '维护中'
-  };
-  
-  if (confirm(`确定要将治具 ${fixture.id} 的状态从 ${statusTextMap[currentStatus]} 改为 ${statusTextMap[newStatus]} 吗？`)) {
-    // 更新状态
-    fixture.status = newStatus;
-    fixture.updatedAt = new Date().toISOString();
-    
-    // 刷新列表
-    applyFilters();
-    renderFixturesTable();
-    
-    showNotification('状态更新', `治具 ${fixture.id} 状态已更新为 ${statusTextMap[newStatus]}`, 'success');
-  }
+// 导入治具
+function importFixtures(data) {
+  DataService.importFixtures(data, 'merge').then(result => {
+    loadFixturesList();
+    showNotification('导入成功', `导入了 ${result.imported} 条记录，更新了 ${result.updated} 条记录，跳过了 ${result.skipped} 条记录`);
+  }).catch(error => {
+    showNotification('导入失败', '导入治具时出现错误');
+    console.error('导入治具失败:', error);
+  });
 }
 
-// 批量设置为维护中状态
-function batchSetMaintenanceStatus() {
-  if (JigState.selectedFixtures.length === 0) return;
+// 导出治具
+function exportFixtures(fixtures) {
+  const jsonData = JSON.stringify(fixtures, null, 2);
+  const blob = new Blob([jsonData], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
   
-  if (confirm(`确定要将选中的 ${JigState.selectedFixtures.length} 个治具标记为维护中吗？`)) {
-    JigState.fixtures.forEach(fixture => {
-      if (JigState.selectedFixtures.includes(fixture.id)) {
-        fixture.status = 'maintenance';
-        fixture.updatedAt = new Date().toISOString();
-      }
-    });
-    
-    // 清空选择
-    JigState.selectedFixtures = [];
-    updateCheckboxStates();
-    updateSelectAllStatus();
-    updateBatchOperationsStatus();
-    
-    // 刷新列表
-    applyFilters();
-    renderFixturesTable();
-    
-    showNotification('状态更新', `已将 ${JigState.selectedFixtures.length} 个治具标记为维护中`, 'success');
-  }
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'fixtures.json';
+  a.click();
+  
+  URL.revokeObjectURL(url);
 }
 
-// 查看治具详情
-function viewFixtureDetails(id) {
-  const fixture = JigState.fixtures.find(f => f.id === id);
-  if (!fixture) return;
+// 显示通知提示
+function showNotification(title, message) {
+  const notification = document.getElementById('notification');
+  const notificationTitle = document.getElementById('notificationTitle');
+  const notificationMessage = document.getElementById('notificationMessage');
   
-  // 在实际应用中，这里可以打开详情模态框或跳转到详情页
-  alert(`治具详情：\n\nID: ${fixture.id}\n类型: ${fixture.type}\n产能: ${fixture.capacity}\n排程: ${fixture.schedule}\n位置: ${fixture.location || '未设置'}\n状态: ${getStatusText(fixture.status)}\n描述: ${fixture.description || '无'}`);
+  notificationTitle.textContent = title;
+  notificationMessage.textContent = message;
+  
+  notification.classList.remove('hidden');
+  
+  setTimeout(() => {
+    notification.classList.add('hidden');
+  }, 3000);
 }
 
 // 重置筛选条件
 function resetFilters() {
-  document.getElementById('fixtureSearch').value = '';
-  document.getElementById('fixtureFilter').value = 'all';
-  document.getElementById('fixtureTypeFilter').value = 'all';
-  
   JigState.filters = {
     status: 'all',
-    type: 'all',
-    search: ''
-  };
-  
-  JigState.currentPage = 1;
-  applyFilters();
-}
-
-// 更新批量操作按钮状态
-function updateBatchOperationsStatus() {
-  const hasSelection = JigState.selectedFixtures.length > 0;
-  const batchButtons = document.querySelectorAll('#batchOperationsMenu button');
-  
-  batchButtons.forEach(button => {
-    if (hasSelection) {
-      button.classList.remove('opacity-50', 'cursor-not-allowed');
-      button.removeAttribute('disabled');
-    } else {
-      button.classList.add('opacity-50', 'cursor-not-allowed');
-      button.setAttribute('disabled', 'disabled');
-    }
-  });
-}
-
-// 格式化文件大小
-function formatFileSize(bytes) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// 获取状态文本
-function getStatusText(status) {
-  const statusMap = {
-    'normal': '正常',
-    'overloaded': '超载',
-    'maintenance': '维护中'
-  };
-  return statusMap[status] || status;
-}

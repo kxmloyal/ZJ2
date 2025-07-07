@@ -222,9 +222,7 @@
                   <i class="fa fa-chevron-left text-xs"></i>
                 </button>
                 <div id="paginationNumbers" class="flex">
-                  <button class="z-10 bg-primary text-white relative inline-flex items-center px-4 py-2 border border-primary text-sm font-medium pagination-number active" data-page="1">
-                    1
-                  </button>
+                  <!-- 分页按钮将通过JS动态生成 -->
                 </div>
                 <button id="nextPageBtn" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                   <span class="sr-only">下一页</span>
@@ -370,124 +368,30 @@
       </form>
       <div class="modal-footer">
         <button id="cancelEditFixture" class="btn btn-secondary">取消</button>
-        <button type="submit" form="editFixtureForm" class="btn btn-primary">更新治具</button>
+        <button type="submit" form="editFixtureForm" class="btn btn-primary">保存更改</button>
       </div>
     </div>
   </div>
 
-  <!-- 确认删除模态框 -->
+  <!-- 删除确认模态框 -->
   <div id="deleteConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden fade-in">
-      <div class="p-6">
-        <div class="flex justify-center mb-4">
-          <div class="w-16 h-16 rounded-full bg-danger/10 flex items-center justify-center">
-            <i class="fa fa-trash text-danger text-2xl"></i>
-          </div>
-        </div>
-        <h3 class="text-xl font-semibold text-center mb-2">确认删除</h3>
-        <p class="text-gray-500 text-center mb-6" id="deleteConfirmMessage">
-          您确定要删除这个治具吗？此操作无法撤销。
-        </p>
-        <input type="hidden" id="deleteFixtureId">
-        <div class="flex space-x-3">
-          <button id="cancelDelete" class="btn btn-secondary flex-1">取消</button>
-          <button id="confirmDelete" class="btn btn-danger flex-1">确认删除</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 导入治具模态框 -->
-  <div id="importConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto fade-in">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto fade-in">
       <div class="modal-header">
-        <h3 class="text-lg font-semibold">导入治具数据</h3>
-        <button id="closeImportModal" class="text-gray-400 hover:text-gray-600">
+        <h3 class="text-lg font-semibold">确认删除</h3>
+        <button id="closeDeleteConfirmModal" class="text-gray-400 hover:text-gray-600">
           <i class="fa fa-times"></i>
         </button>
       </div>
       <div class="modal-body">
-        <div class="mb-6">
-          <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors duration-200">
-            <input type="file" id="importJsonFile" accept=".json" class="hidden">
-            <label for="importJsonFile" class="cursor-pointer">
-              <i class="fa fa-cloud-upload text-3xl text-gray-400 mb-3"></i>
-              <p class="text-sm font-medium text-gray-700">点击或拖拽JSON文件到此处</p>
-              <p class="text-xs text-gray-500 mt-1">支持的格式: .json</p>
-            </label>
-          </div>
-          <div id="importFileInfo" class="hidden mt-4 p-4 bg-gray-50 rounded-lg">
-            <div class="flex items-center">
-              <i class="fa fa-file-text-o text-primary mr-3"></i>
-              <div class="flex-1">
-                <p id="importFileName" class="text-sm font-medium text-gray-900 truncate"></p>
-                <p class="text-xs text-gray-500">文件大小: <span id="importFileSize"></span></p>
-              </div>
-              <button id="removeImportFile" class="text-gray-400 hover:text-gray-600">
-                <i class="fa fa-times"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
-          <h4 class="text-sm font-medium text-gray-700 mb-3">导入选项</h4>
-          <div class="space-y-3">
-            <div class="flex items-center">
-              <input id="importReplace" name="importMode" type="radio" value="replace" class="h-4 w-4 text-primary focus:ring-primary border-gray-300">
-              <label for="importReplace" class="ml-3 block text-sm text-gray-700">
-                替换现有数据
-              </label>
-            </div>
-            <div class="flex items-center">
-              <input id="importMerge" name="importMode" type="radio" value="merge" checked class="h-4 w-4 text-primary focus:ring-primary border-gray-300">
-              <label for="importMerge" class="ml-3 block text-sm text-gray-700">
-                合并数据（存在相同ID则更新）
-              </label>
-            </div>
-            <div class="flex items-center">
-              <input id="importIgnore" name="importMode" type="radio" value="ignore" class="h-4 w-4 text-primary focus:ring-primary border-gray-300">
-              <label for="importIgnore" class="ml-3 block text-sm text-gray-700">
-                忽略已有数据（存在相同ID则跳过）
-              </label>
-            </div>
-          </div>
-        </div>
-        
-        <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-2">数据格式示例</h4>
-          <pre class="text-xs text-gray-600 bg-gray-100 p-3 rounded overflow-x-auto text-left">
-[
-  {
-    "id": "F-001",
-    "type": "测试治具",
-    "capacity": 1200,
-    "schedule": 1100,
-    "location": "A车间",
-    "status": "normal",
-    "description": "用于电子产品测试"
-  },
-  {
-    "id": "F-002",
-    "type": "冲压治具",
-    "capacity": 800,
-    "schedule": 650,
-    "location": "B车间",
-    "status": "normal",
-    "description": "用于金属冲压"
-  }
-]
-          </pre>
-        </div>
+        <p>确定要删除选中的治具吗？</p>
       </div>
       <div class="modal-footer">
-        <button id="cancelImport" class="btn btn-secondary">取消</button>
-        <button id="confirmImport" class="btn btn-primary" disabled>开始导入</button>
+        <button id="cancelDeleteFixture" class="btn btn-secondary">取消</button>
+        <button id="confirmDeleteFixture" class="btn btn-danger">删除</button>
       </div>
     </div>
   </div>
 
-  <script src="common.js"></script>
   <script src="jig-script.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -514,7 +418,7 @@
           menu.classList.add('hidden');
         }
       });
-      
+
       // 初始化治具管理功能
       initJigManagement();
     });
