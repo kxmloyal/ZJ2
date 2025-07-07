@@ -70,7 +70,7 @@ exports.create = async (data) => {
   
   // 生成ID（如果未提供）
   const newItem = {
-    id: data.id || `F-${Date.now().toString().slice(-6)}`,
+    id: data.id || `ZJ-${data.model}-${Date.now().toString().slice(-6)}`,
     ...data,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -90,7 +90,7 @@ exports.bulkCreate = async (items) => {
   
   items.forEach(item => {
     const newItem = {
-      id: item.id || `F-${Date.now().toString().slice(-6)}-${uuidv4().slice(-4)}`,
+      id: item.id || `ZJ-${item.model}-${Date.now().toString().slice(-6)}-${uuidv4().slice(-4)}`,
       ...item,
       createdAt: timestamp,
       updatedAt: timestamp

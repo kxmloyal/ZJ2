@@ -1,116 +1,9 @@
-// 渲染图表
-function renderCharts() {
-  // 产能趋势图表
-  DataService.getCapacityTrend().then(data => {
-    const ctx = document.getElementById('capacityTrendChart').getContext('2d');
-    
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: data.labels,
-        datasets: [
-          {
-            label: '实际产能',
-            data: data.actual,
-            borderColor: '#3B82F6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.3,
-            fill: true
-          },
-          {
-            label: '计划产能',
-            data: data.planned,
-            borderColor: '#94A3B8',
-            backgroundColor: 'transparent',
-            borderDash: [5, 5],
-            tension: 0.3
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'top',
-          },
-          tooltip: {
-            mode: 'index',
-            intersect: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              drawBorder: false
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            }
-          }
-        },
-        interaction: {
-          mode: 'nearest',
-          axis: 'x',
-          intersect: false
-        }
-      }
-    });
-  });
-  
-  // 治具类型分布图表
-  DataService.getFixtureTypeDistribution().then(data => {
-    const ctx = document.getElementById('fixtureTypeChart').getContext('2d');
-    
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: data.labels,
-        datasets: [{
-          data: data.data,
-          backgroundColor: [
-            '#3B82F6',
-            '#10B981',
-            '#F59E0B',
-            '#EF4444',
-            '#8B5CF6'
-          ],
-          borderWidth: 0,
-          hoverOffset: 4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom'
-          }
-        },
-        cutout: '70%'
-      }
-    });
-  });
-}
-
-// 加载统计数据
-function loadStatistics() {
-  DataService.getFixtureStats().then(stats => {
-    document.getElementById('totalFixtures').textContent = stats.totalFixtures;
-    document.getElementById('utilizationRate').textContent = `${stats.utilizationRate}%`;
-    document.getElementById('overloadedFixtures').textContent = stats.overloadedFixtures;
-    document.getElementById('totalOutput').textContent = stats.totalOutput.toLocaleString();
-  });
-}
-
 // 加载治具状态列表
-function loadFixtureStatusList() {
+async function loadFixtureStatusList() {
   const tableBody = document.getElementById('fixtureStatusTable');
   
-  DataService.getFixtureStatusList().then(fixtures => {
+  try {
+    const fixtures = await getAllFixtures();
     if (fixtures.length === 0) {
       tableBody.innerHTML = `
         <tr class="text-center">
@@ -125,6 +18,9 @@ function loadFixtureStatusList() {
     
     let html = '';
     fixtures.forEach(fixture => {
+      const capacities = calculateCapacities(fixture);
+      const utilization = ((fixture.schedule / fixture.capacity) * 100).toFixed(1);
+      
       // 确定状态样式
       let statusClass = '';
       let statusText = '';
@@ -144,8 +40,14 @@ function loadFixtureStatusList() {
         progressClass = 'progress-normal';
       }
       
+      // 提前预警
+      let warningClass = '';
+      if (fixture.schedule > fixture.capacity * 0.8) {
+        warningClass = 'bg-yellow-100';
+      }
+      
       html += `
-        <tr class="fade-in">
+        <tr class="fade-in ${warningClass}">
           <td class="px-6 py-4 whitespace-nowrap">
             <div class="font-medium text-gray-900">${fixture.id}</div>
           </td>
@@ -156,10 +58,10 @@ function loadFixtureStatusList() {
             <div class="flex items-center">
               <div class="w-full mr-2">
                 <div class="progress-bar">
-                  <div class="progress-value ${progressClass}" style="width: ${fixture.utilization}%"></div>
+                  <div class="progress-value ${progressClass}" style="width: ${utilization}%"></div>
                 </div>
               </div>
-              <span class="text-sm font-medium">${fixture.utilization}%</span>
+              <span class="text-sm font-medium">${utilization}%</span>
             </div>
           </td>
           <td class="px-6 py-4 whitespace-nowrap">
@@ -176,14 +78,21 @@ function loadFixtureStatusList() {
     });
     
     tableBody.innerHTML = html;
-  });
+  } catch (error) {
+    tableBody.innerHTML = `
+      <tr class="text-center">
+        <td colspan="7" class="px-6 py-10 text-gray-500">
+          <div class="flex flex-col items-center">
+            <i class="fa fa-exclamation-triangle text-2xl text-warning mb-2"></i>
+            <p>加载数据失败</p>
+            <button onclick="loadFixtureStatusList()" class="mt-2 text-primary hover:underline">重试</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    console.error('加载治具数据失败:', error);
+  }
 }
 
-// 页面加载完成后执行
-document.addEventListener('DOMContentLoaded', () => {
-  // 加载统计数据
-  loadStatistics();
-  
-  // 加载治具状态列表
-  loadFixtureStatusList();
-});
+// 页面加载完成后加载治具状态列表
+window.addEventListener('load', loadFixtureStatusList);

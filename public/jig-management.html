@@ -11,6 +11,8 @@
   <!-- 引入公共配置和样式 -->
   <script src="common.js"></script>
   <link rel="stylesheet" href="common.css">
+  <script src="user-auth.js"></script>
+  <script src="jig-script.js"></script>
 </head>
 <body class="font-inter bg-gray-50 text-dark min-h-screen flex flex-col">
   <!-- 侧边栏导航 -->
@@ -27,233 +29,155 @@
     
     <div class="h-full overflow-y-auto scrollbar-hide py-4">
       <nav class="px-4 space-y-1">
-        <a href="index.html" class="flex items-center px-3 py-2 text-base font-medium rounded-lg text-gray-600 hover:bg-gray-100">
-          <i class="fa fa-dashboard w-5 h-5 mr-3"></i>
+        <!-- 导航链接 -->
+        <a href="index.html" class="flex items-center px-3 py-2 text-gray-700 hover:text-gray-900 rounded-md">
+          <i class="fa fa-dashboard mr-3"></i>
           仪表盘
         </a>
-        <a href="jig-management.html" class="flex items-center px-3 py-2 text-base font-medium rounded-lg bg-primary/10 text-primary">
-          <i class="fa fa-cogs w-5 h-5 mr-3"></i>
+        <a href="#" class="flex items-center px-3 py-2 text-gray-700 hover:text-gray-900 rounded-md">
+          <i class="fa fa-cog mr-3"></i>
           治具管理
-        </a>
-        <a href="#" class="flex items-center px-3 py-2 text-base font-medium rounded-lg text-gray-600 hover:bg-gray-100">
-          <i class="fa fa-calendar w-5 h-5 mr-3"></i>
-          排程计划
-        </a>
-        <a href="#" class="flex items-center px-3 py-2 text-base font-medium rounded-lg text-gray-600 hover:bg-gray-100">
-          <i class="fa fa-bell w-5 h-5 mr-3"></i>
-          警报历史
-        </a>
-        <a href="#" class="flex items-center px-3 py-2 text-base font-medium rounded-lg text-gray-600 hover:bg-gray-100">
-          <i class="fa fa-cog w-5 h-5 mr-3"></i>
-          系统设置
         </a>
       </nav>
     </div>
   </div>
-
-  <!-- 主内容区 -->
-  <div class="flex-1 md:ml-64 transition-all duration-300">
-    <!-- 顶部导航栏 -->
-    <header class="bg-white shadow-sm sticky top-0 z-30">
-      <div class="flex items-center justify-between h-16 px-4">
-        <div class="flex items-center">
-          <button type="button" class="text-gray-500 hover:text-gray-600 md:hidden" id="openSidebar">
-            <i class="fa fa-bars"></i>
-          </button>
-          <div class="ml-4 md:ml-0">
-            <h2 class="text-lg font-semibold">治具管理</h2>
-          </div>
-        </div>
-        
-        <div class="flex items-center space-x-4">
-          <button class="relative p-2 text-gray-500 hover:text-gray-600">
-            <i class="fa fa-bell"></i>
-            <span class="absolute top-0 right-0 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-danger rounded-full">3</span>
-          </button>
-          
-          <div class="relative">
-            <button class="flex items-center space-x-2 focus:outline-none" id="userMenuButton">
-              <img class="h-8 w-8 rounded-full object-cover" src="https://picsum.photos/200/200?random=1" alt="用户头像">
-              <span class="text-sm font-medium">管理员</span>
-              <i class="fa fa-chevron-down text-xs text-gray-400"></i>
-            </button>
-            
-            <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden z-50" id="userMenu">
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                <i class="fa fa-user mr-2"></i> 个人资料
-              </a>
-              <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                <i class="fa fa-cog mr-2"></i> 设置
-              </a>
-              <div class="border-t border-gray-100 my-1"></div>
-              <a href="#" class="block px-4 py-2 text-sm text-danger hover:bg-gray-100">
-                <i class="fa fa-sign-out mr-2"></i> 退出登录
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- 通知提示 -->
-    <div id="notification" class="hidden fixed top-20 right-4 z-50 max-w-sm w-full bg-white shadow-lg rounded-lg overflow-hidden transform transition-all duration-300 ease-in-out">
-      <div class="p-4 flex items-start">
-        <div id="notificationIcon" class="flex-shrink-0 text-success">
-          <i class="fa fa-check-circle text-xl"></i>
-        </div>
-        <div class="ml-3 w-0 flex-1 pt-0.5">
-          <p id="notificationTitle" class="text-sm font-medium text-gray-900">操作成功</p>
-          <p id="notificationMessage" class="mt-1 text-sm text-gray-500">治具已成功添加</p>
-        </div>
-        <button id="closeNotification" class="ml-4 flex-shrink-0 flex">
-          <i class="fa fa-times text-gray-400 hover:text-gray-500"></i>
+  
+  <!-- 主内容区域 -->
+  <main class="flex-1 p-8">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center">
+        <button id="openSidebar" class="text-gray-500 hover:text-gray-600 md:hidden">
+          <i class="fa fa-bars"></i>
         </button>
-      </div>
-    </div>
-
-    <!-- 内容区域 -->
-    <main class="container mx-auto px-4 py-6">
-      <!-- 操作栏 -->
-      <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div class="flex flex-col sm:flex-row gap-4">
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fa fa-search text-gray-400"></i>
-              </div>
-              <input type="text" id="fixtureSearch" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="搜索治具编号或类型...">
-            </div>
-            
-            <div class="flex items-center">
-              <label for="fixtureFilter" class="block text-sm font-medium text-gray-700 mr-2">状态:</label>
-              <select id="fixtureFilter" class="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white">
-                <option value="all">全部</option>
-                <option value="normal">正常</option>
-                <option value="overloaded">超载</option>
-                <option value="maintenance">维护中</option>
-              </select>
-            </div>
-
-            <div class="flex items-center">
-              <label for="fixtureTypeFilter" class="block text-sm font-medium text-gray-700 mr-2">类型:</label>
-              <select id="fixtureTypeFilter" class="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white">
-                <option value="all">全部类型</option>
-                <!-- 类型选项将通过JS动态填充 -->
-              </select>
-            </div>
-          </div>
-          
-          <div class="flex space-x-3">
-            <div class="relative">
-              <button id="batchOperationsBtn" class="btn btn-secondary">
-                <i class="fa fa-cog mr-2"></i> 批量操作
-                <i class="fa fa-chevron-down ml-2 text-xs"></i>
-              </button>
-              <div id="batchOperationsMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
-                <button id="batchDeleteBtn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  <i class="fa fa-trash mr-2"></i> 批量删除
-                </button>
-                <button id="batchExportBtn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  <i class="fa fa-download mr-2"></i> 批量导出
-                </button>
-                <div class="border-t border-gray-100 my-1"></div>
-                <button id="batchMaintenanceBtn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                  <i class="fa fa-wrench mr-2"></i> 标记为维护中
-                </button>
-              </div>
-            </div>
-            <label for="importFile" class="btn btn-secondary cursor-pointer">
-              <i class="fa fa-upload mr-2"></i> 导入
-            </label>
-            <input type="file" id="importFile" accept=".json" class="hidden">
-            <button id="exportFixturesBtn" class="btn btn-secondary">
-              <i class="fa fa-download mr-2"></i> 导出
-            </button>
-            <button id="addFixtureBtn" class="btn btn-primary">
-              <i class="fa fa-plus mr-2"></i> 添加治具
-            </button>
-          </div>
+        <div class="ml-4 md:ml-0">
+          <h2 class="text-lg font-semibold">治具管理</h2>
         </div>
       </div>
       
-      <!-- 治具列表 -->
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="table">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-                  <input type="checkbox" id="selectAllFixtures" class="rounded text-primary focus:ring-primary">
-                </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">治具编号</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">固定产能(件/月)</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">当前排程(件)</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">利用率</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">位置</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-              </tr>
-            </thead>
-            <tbody id="fixturesTableBody" class="bg-white divide-y divide-gray-200">
-              <!-- 表格内容将通过JavaScript动态生成 -->
-              <tr class="text-center">
-                <td colspan="9" class="px-6 py-10 text-gray-500">
-                  <i class="fa fa-spinner fa-spin text-xl mb-2"></i>
-                  <p>正在加载数据...</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="flex items-center space-x-4">
+        <button class="relative p-2 text-gray-500 hover:text-gray-600">
+          <i class="fa fa-bell"></i>
+          <span class="absolute top-0 right-0 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-danger rounded-full">3</span>
+        </button>
         
-        <!-- 分页控件 -->
-        <div class="px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p class="text-sm text-gray-700">
-                显示第 <span class="font-medium" id="currentPageText">1</span> 到 <span class="font-medium" id="endPageText">8</span> 条，共 <span class="font-medium" id="fixturesCount">0</span> 条结果
-              </p>
-            </div>
-            <div>
-              <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button id="prevPageBtn" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                  <span class="sr-only">上一页</span>
-                  <i class="fa fa-chevron-left text-xs"></i>
-                </button>
-                <div id="paginationNumbers" class="flex">
-                  <!-- 分页按钮将通过JS动态生成 -->
-                </div>
-                <button id="nextPageBtn" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                  <span class="sr-only">下一页</span>
-                  <i class="fa fa-chevron-right text-xs"></i>
-                </button>
-              </nav>
-            </div>
+        <div class="relative">
+          <button class="flex items-center space-x-2 focus:outline-none" id="userMenuButton">
+            <img class="h-8 w-8 rounded-full object-cover" src="https://picsum.photos/200/200?random=1" alt="用户头像">
+            <span class="text-sm font-medium">管理员</span>
+            <i class="fa fa-chevron-down text-xs text-gray-400"></i>
+          </button>
+          
+          <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 hidden z-50" id="userMenu">
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              <i class="fa fa-user mr-2"></i> 个人资料
+            </a>
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+              <i class="fa fa-cog mr-2"></i> 设置
+            </a>
+            <div class="border-t border-gray-100 my-1"></div>
+            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" id="logoutButton">
+              <i class="fa fa-sign-out mr-2"></i> 退出登录
+            </a>
           </div>
         </div>
       </div>
-    </main>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-2">
+        <button id="importFixturesBtn" class="btn btn-secondary">
+          <i class="fa fa-upload mr-2"></i> 导入
+        </button>
+        <input type="file" id="importFile" accept=".json" class="hidden">
+        <button id="exportFixturesBtn" class="btn btn-secondary">
+          <i class="fa fa-download mr-2"></i> 导出
+        </button>
+        <button id="addFixtureBtn" class="btn btn-primary">
+          <i class="fa fa-plus mr-2"></i> 添加治具
+        </button>
+      </div>
+      
+      <div class="flex items-center space-x-2">
+        <input type="text" id="searchFixtures" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="搜索治具">
+        <button id="filterFixturesBtn" class="btn btn-primary">
+          <i class="fa fa-filter mr-2"></i> 筛选
+        </button>
+      </div>
+    </div>
+    
+    <!-- 治具列表 -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                <input type="checkbox" id="selectAllFixtures" class="rounded text-primary focus:ring-primary">
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">治具编号</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">固定产能(件/月)</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">当前排程(件)</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">利用率</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">位置</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+            </tr>
+          </thead>
+          <tbody id="fixturesTableBody" class="bg-white divide-y divide-gray-200">
+            <!-- 表格内容将通过JavaScript动态生成 -->
+            <tr class="text-center">
+              <td colspan="9" class="px-6 py-10 text-gray-500">
+                <i class="fa fa-spinner fa-spin text-xl mb-2"></i>
+                <p>正在加载数据...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- 分页控件 -->
+      <div class="px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm text-gray-700">
+              显示 <span id="currentPageText">1</span> 到 <span id="endPageText">8</span> 项，共 <span id="fixturesCount">0</span> 项
+            </p>
+          </div>
+          <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <i class="fa fa-chevron-left"></i>
+              </a>
+              <a href="#" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <i class="fa fa-chevron-right"></i>
+              </a>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
 
-    <!-- 页脚 -->
-    <footer class="bg-white border-t border-gray-200 py-6 mt-6">
-      <div class="container mx-auto px-4">
-        <div class="flex flex-col md:flex-row justify-between items-center">
-          <div class="text-gray-500 text-sm mb-4 md:mb-0">
-            © 2025 治具产能监控系统. 保留所有权利.
-          </div>
-          <div class="flex space-x-6">
-            <a href="#" class="text-gray-500 hover:text-gray-700">
-              关于我们
-            </a>
-            <a href="#" class="text-gray-500 hover:text-gray-700">
-              联系我们
-            </a>
-          </div>
+  <!-- 页脚 -->
+  <footer class="bg-white border-t border-gray-200 py-6 mt-6">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="text-gray-500 text-sm mb-4 md:mb-0">
+          © 2025 治具产能监控系统. 保留所有权利.
+        </div>
+        <div class="flex space-x-6">
+          <a href="#" class="text-gray-500 hover:text-gray-700">
+            关于我们
+          </a>
+          <a href="#" class="text-gray-500 hover:text-gray-700">
+            联系我们
+          </a>
         </div>
       </div>
-    </footer>
-  </div>
+    </div>
+  </footer>
 
   <!-- 添加治具模态框 -->
   <div id="addFixtureModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
@@ -284,33 +208,44 @@
           
           <div>
             <label for="fixtureSchedule" class="block text-sm font-medium text-gray-700 mb-1">当前排程(件) <span class="text-danger">*</span></label>
-            <input type="number" id="fixtureSchedule" name="fixtureSchedule" min="0" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1000" required>
+            <input type="number" id="fixtureSchedule" name="fixtureSchedule" min="0" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1100" required>
           </div>
           
           <div>
-            <label for="fixtureLocation" class="block text-sm font-medium text-gray-700 mb-1">存放位置</label>
-            <input type="text" id="fixtureLocation" name="fixtureLocation" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：A车间">
+            <label for="fixtureLocation" class="block text-sm font-medium text-gray-700 mb-1">位置 <span class="text-danger">*</span></label>
+            <input type="text" id="fixtureLocation" name="fixtureLocation" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：A车间" required>
           </div>
           
           <div>
             <label for="fixtureStatus" class="block text-sm font-medium text-gray-700 mb-1">状态 <span class="text-danger">*</span></label>
-            <select id="fixtureStatus" name="fixtureStatus" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white">
+            <select id="fixtureStatus" name="fixtureStatus" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
               <option value="normal">正常</option>
               <option value="overloaded">超载</option>
               <option value="maintenance">维护中</option>
             </select>
           </div>
-
+          
           <div>
             <label for="fixtureDescription" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
-            <textarea id="fixtureDescription" name="fixtureDescription" rows="3" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入治具的详细描述信息"></textarea>
+            <textarea id="fixtureDescription" name="fixtureDescription" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入治具描述"></textarea>
+          </div>
+          
+          <div>
+            <label for="workingHoursPerDay" class="block text-sm font-medium text-gray-700 mb-1">每天上班时间(小时) <span class="text-danger">*</span></label>
+            <input type="number" id="workingHoursPerDay" name="workingHoursPerDay" min="1" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：8" required>
+          </div>
+          
+          <div>
+            <label for="workingDaysPerMonth" class="block text-sm font-medium text-gray-700 mb-1">每月上班天数 <span class="text-danger">*</span></label>
+            <input type="number" id="workingDaysPerMonth" name="workingDaysPerMonth" min="1" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：22" required>
           </div>
         </div>
+        
+        <div class="modal-footer">
+          <button type="button" id="cancelAddFixture" class="btn btn-secondary">取消</button>
+          <button type="submit" class="btn btn-primary">添加</button>
+        </div>
       </form>
-      <div class="modal-footer">
-        <button id="cancelAddFixture" class="btn btn-secondary">取消</button>
-        <button type="submit" form="addFixtureForm" class="btn btn-primary">保存治具</button>
-      </div>
     </div>
   </div>
 
@@ -324,7 +259,6 @@
         </button>
       </div>
       <form id="editFixtureForm" class="modal-body">
-        <input type="hidden" id="editFixtureId" name="editFixtureId">
         <div class="space-y-4">
           <div>
             <label for="editFixtureIdDisplay" class="block text-sm font-medium text-gray-700 mb-1">治具编号</label>
@@ -343,85 +277,64 @@
           
           <div>
             <label for="editFixtureSchedule" class="block text-sm font-medium text-gray-700 mb-1">当前排程(件) <span class="text-danger">*</span></label>
-            <input type="number" id="editFixtureSchedule" name="editFixtureSchedule" min="0" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1000" required>
+            <input type="number" id="editFixtureSchedule" name="editFixtureSchedule" min="0" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1100" required>
           </div>
           
           <div>
-            <label for="editFixtureLocation" class="block text-sm font-medium text-gray-700 mb-1">存放位置</label>
-            <input type="text" id="editFixtureLocation" name="editFixtureLocation" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：A车间">
+            <label for="editFixtureLocation" class="block text-sm font-medium text-gray-700 mb-1">位置 <span class="text-danger">*</span></label>
+            <input type="text" id="editFixtureLocation" name="editFixtureLocation" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：A车间" required>
           </div>
           
           <div>
             <label for="editFixtureStatus" class="block text-sm font-medium text-gray-700 mb-1">状态 <span class="text-danger">*</span></label>
-            <select id="editFixtureStatus" name="editFixtureStatus" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white">
+            <select id="editFixtureStatus" name="editFixtureStatus" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
               <option value="normal">正常</option>
               <option value="overloaded">超载</option>
               <option value="maintenance">维护中</option>
             </select>
           </div>
-
+          
           <div>
             <label for="editFixtureDescription" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
-            <textarea id="editFixtureDescription" name="editFixtureDescription" rows="3" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入治具的详细描述信息"></textarea>
+            <textarea id="editFixtureDescription" name="editFixtureDescription" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入治具描述"></textarea>
+          </div>
+          
+          <div>
+            <label for="editWorkingHoursPerDay" class="block text-sm font-medium text-gray-700 mb-1">每天上班时间(小时) <span class="text-danger">*</span></label>
+            <input type="number" id="editWorkingHoursPerDay" name="editWorkingHoursPerDay" min="1" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：8" required>
+          </div>
+          
+          <div>
+            <label for="editWorkingDaysPerMonth" class="block text-sm font-medium text-gray-700 mb-1">每月上班天数 <span class="text-danger">*</span></label>
+            <input type="number" id="editWorkingDaysPerMonth" name="editWorkingDaysPerMonth" min="1" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：22" required>
           </div>
         </div>
+        
+        <div class="modal-footer">
+          <button type="button" id="cancelEditFixture" class="btn btn-secondary">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
       </form>
-      <div class="modal-footer">
-        <button id="cancelEditFixture" class="btn btn-secondary">取消</button>
-        <button type="submit" form="editFixtureForm" class="btn btn-primary">保存更改</button>
-      </div>
     </div>
   </div>
 
-  <!-- 删除确认模态框 -->
-  <div id="deleteConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto fade-in">
+  <!-- 删除治具模态框 -->
+  <div id="deleteFixtureModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto fade-in">
       <div class="modal-header">
-        <h3 class="text-lg font-semibold">确认删除</h3>
-        <button id="closeDeleteConfirmModal" class="text-gray-400 hover:text-gray-600">
+        <h3 class="text-lg font-semibold">删除治具</h3>
+        <button id="closeDeleteModal" class="text-gray-400 hover:text-gray-600">
           <i class="fa fa-times"></i>
         </button>
       </div>
       <div class="modal-body">
-        <p>确定要删除选中的治具吗？</p>
+        <p>确定要删除该治具吗？</p>
       </div>
       <div class="modal-footer">
-        <button id="cancelDeleteFixture" class="btn btn-secondary">取消</button>
-        <button id="confirmDeleteFixture" class="btn btn-danger">删除</button>
+        <button type="button" id="cancelDeleteFixture" class="btn btn-secondary">取消</button>
+        <button type="button" id="confirmDeleteFixture" class="btn btn-danger">删除</button>
       </div>
     </div>
   </div>
-
-  <script src="jig-script.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // 侧边栏控制
-      document.getElementById('openSidebar').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.remove('-translate-x-full');
-      });
-      
-      document.getElementById('closeSidebar').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.add('-translate-x-full');
-      });
-      
-      // 用户菜单控制
-      document.getElementById('userMenuButton').addEventListener('click', () => {
-        const menu = document.getElementById('userMenu');
-        menu.classList.toggle('hidden');
-      });
-      
-      document.addEventListener('click', (event) => {
-        const menuButton = document.getElementById('userMenuButton');
-        const menu = document.getElementById('userMenu');
-        
-        if (!menuButton.contains(event.target) && !menu.contains(event.target)) {
-          menu.classList.add('hidden');
-        }
-      });
-
-      // 初始化治具管理功能
-      initJigManagement();
-    });
-  </script>
 </body>
 </html>

@@ -95,6 +95,17 @@ stop_app() {
   fi
 }
 
+# 执行命令并记录日志
+execute_command() {
+  local command=$1
+  local message=$2
+  log "INFO" "$message: $command"
+  if ! eval "$command"; then
+    log "ERROR" "$message 失败"
+    exit 1
+  fi
+}
+
 # 初始化日志文件
 > "$LOG_FILE"
 log "INFO" "开始部署 $APP_NAME (纯后台运行版本)"
@@ -126,11 +137,10 @@ show_progress $current_step $TOTAL_STEPS "系统初始化..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 系统初始化"
 
 # 安装必要系统工具
-log "INFO" "安装基础系统工具..."
 if command -v yum &> /dev/null; then
-  yum install -y curl wget git tar gcc-c++ make
+  execute_command "yum install -y curl wget git tar gcc-c++ make" "安装基础系统工具（yum）"
 else
-  apt install -y curl wget git tar build-essential
+  execute_command "apt install -y curl wget git tar build-essential" "安装基础系统工具（apt）"
 fi
 
 # 步骤2：安装Node.js和npm（修复依赖问题）
@@ -139,17 +149,21 @@ show_progress $current_step $TOTAL_STEPS "安装Node.js $NODE_VERSION..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 安装Node.js $NODE_VERSION"
 
 # 移除可能存在的旧版本
-yum remove -y nodejs npm || apt remove -y nodejs npm
+if command -v yum &> /dev/null; then
+  execute_command "yum remove -y nodejs npm" "移除旧版本Node.js和npm（yum）"
+else
+  execute_command "apt remove -y nodejs npm" "移除旧版本Node.js和npm（apt）"
+fi
 
 # 手动安装Node.js 16 LTS（解决GLIBC依赖问题）
-mkdir -p /opt/nodejs && cd /opt/nodejs
+execute_command "mkdir -p /opt/nodejs && cd /opt/nodejs" "创建Node.js安装目录"
 NODE_VERSION=$(curl -s https://nodejs.org/dist/latest-v16.x/ | grep -o 'node-v16\.[0-9]*\.[0-9]*-linux-x64.tar.xz' | head -1)
-wget -q https://nodejs.org/dist/latest-v16.x/$NODE_VERSION
-tar -xJf $NODE_VERSION
-rm $NODE_VERSION
-ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/node /usr/bin/node
-ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/npm /usr/bin/npm
-ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/npx /usr/bin/npx
+execute_command "wget -q https://nodejs.org/dist/latest-v16.x/$NODE_VERSION" "下载Node.js $NODE_VERSION"
+execute_command "tar -xJf $NODE_VERSION" "解压Node.js $NODE_VERSION"
+execute_command "rm $NODE_VERSION" "删除Node.js压缩包"
+execute_command "ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/node /usr/bin/node" "创建Node.js软链接"
+execute_command "ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/npm /usr/bin/npm" "创建npm软链接"
+execute_command "ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/npx /usr/bin/npx" "创建npx软链接"
 
 # 验证Node.js安装
 log "INFO" "Node.js版本: $(node -v)"
@@ -160,54 +174,19 @@ current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "创建部署目录..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 创建部署目录"
 
-mkdir -p $DEPLOY_DIR
-chmod -R 755 $DEPLOY_DIR
-chown -R $USER:$USER $DEPLOY_DIR 2>/dev/null || true
+execute_command "mkdir -p $DEPLOY_DIR" "创建部署目录"
+execute_command "chmod -R 755 $DEPLOY_DIR" "设置部署目录权限"
+execute_command "chown -R $USER:$USER $DEPLOY_DIR 2>/dev/null || true" "设置部署目录所有者"
 
 # 步骤4：复制应用文件
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "复制应用文件..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 复制应用文件"
 
-# 复制应用文件
-cp -r $APP_DIR/* $DEPLOY_DIR/
-
-# 验证 server.js 和配置文件是否存在
-if [ ! -f "$DEPLOY_DIR/src/server.js" ]; then
-  log "ERROR" "找不到 server.js 文件，请检查源目录结构"
-  log "ERROR" "源目录内容:"
-  ls -l $APP_DIR/ >> "$LOG_FILE"
-  log "ERROR" "部署目录内容:"
-  ls -l $DEPLOY_DIR/ >> "$LOG_FILE"
-  echo -e "\n${RED}部署失败：找不到 server.js 文件${NC}"
-  exit 1
-fi
-
-if [ ! -f "$DEPLOY_DIR/config/default.json" ]; then
-  log "INFO" "配置文件不存在，创建默认配置..."
-  mkdir -p $DEPLOY_DIR/config
-  cat > "$DEPLOY_DIR/config/default.json" << EOF
-{
-  "database": {
-    "type": "json",
-    "path": "./data/fixtures.json"
-  },
-  "server": {
-    "port": 3000,
-    "host": "0.0.0.0"
-  },
-  "cache": {
-    "stdTTL": 300,
-    "checkperiod": 600
-  }
-}
-EOF
-fi
-
-# 确保必要目录存在
-mkdir -p $DEPLOY_DIR/public
-mkdir -p $DEPLOY_DIR/data
-mkdir -p $DEPLOY_DIR/src
+execute_command "cp -r $APP_DIR/* $DEPLOY_DIR/" "复制应用文件"
+execute_command "mkdir -p $DEPLOY_DIR/public" "创建public目录"
+execute_command "mkdir -p $DEPLOY_DIR/data" "创建data目录"
+execute_command "mkdir -p $DEPLOY_DIR/src" "创建src目录"
 
 # 步骤5：配置package.json
 current_step=$((current_step + 1))
@@ -244,11 +223,9 @@ current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "安装应用依赖..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 安装应用依赖"
 
-# 清除npm缓存
-npm cache clean --force
-
-cd $DEPLOY_DIR
-npm install --production
+execute_command "npm cache clean --force" "清除npm缓存"
+execute_command "cd $DEPLOY_DIR" "进入部署目录"
+execute_command "npm install --production" "安装应用依赖"
 
 # 步骤7：配置环境变量
 current_step=$((current_step + 1))
@@ -263,57 +240,28 @@ DATA_DIR=$DEPLOY_DIR/data
 LOG_DIR=$DEPLOY_DIR/logs
 EOF
 
-# 创建日志目录
-mkdir -p $DEPLOY_DIR/logs
-touch $APP_LOG_FILE
-chmod 666 $APP_LOG_FILE
+execute_command "mkdir -p $DEPLOY_DIR/logs" "创建日志目录"
+execute_command "touch $APP_LOG_FILE" "创建应用日志文件"
+execute_command "chmod 666 $APP_LOG_FILE" "设置应用日志文件权限"
 
 # 步骤8：停止现有应用
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "停止现有应用..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 停止现有应用"
 
-stop_app
-
-# 步骤9：验证启动文件
-current_step=$((current_step + 1))
-show_progress $current_step $TOTAL_STEPS "验证启动文件..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 验证启动文件"
-
-# 再次确认 server.js 和配置文件存在
-if [ ! -f "$DEPLOY_DIR/src/server.js" ]; then
-  log "ERROR" "启动失败：找不到 server.js 文件"
-  log "ERROR" "部署目录内容:"
-  ls -l $DEPLOY_DIR/ >> "$LOG_FILE"
-  log "ERROR" "部署目录 src 内容:"
-  ls -l $DEPLOY_DIR/src/ >> "$LOG_FILE"
-  echo -e "\n${RED}启动失败：找不到 server.js 文件${NC}"
+if ! stop_app; then
+  log "ERROR" "停止现有应用失败，部署终止"
   exit 1
 fi
 
-if [ ! -f "$DEPLOY_DIR/config/default.json" ]; then
-  log "ERROR" "启动失败：找不到配置文件 config/default.json"
-  log "ERROR" "部署目录 config 内容:"
-  ls -l $DEPLOY_DIR/config/ >> "$LOG_FILE"
-  echo -e "\n${RED}启动失败：找不到配置文件 config/default.json${NC}"
-  exit 1
-fi
-
-# 显示关键文件信息
-log "INFO" "server.js 文件信息:"
-ls -l "$DEPLOY_DIR/src/server.js"
-
-log "INFO" "配置文件信息:"
-ls -l "$DEPLOY_DIR/config/default.json"
-
-# 步骤10：启动应用服务（纯后台运行）
+# 步骤9：启动应用服务（纯后台运行）
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "启动应用服务..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 启动应用服务"
 
 # 启动应用
-cd $DEPLOY_DIR
-echo "启动应用..." > $APP_LOG_FILE
+execute_command "cd $DEPLOY_DIR" "进入部署目录"
+execute_command "echo '启动应用...' > $APP_LOG_FILE" "写入启动信息到应用日志文件"
 nohup node src/server.js > $APP_LOG_FILE 2>&1 &
 echo $! > $PID_FILE
 
@@ -323,13 +271,12 @@ if check_app_status; then
   log "INFO" "应用启动成功"
 else
   log "ERROR" "应用启动失败"
-  log "ERROR" "应用日志内容:"
   tail -n 50 $APP_LOG_FILE >> "$LOG_FILE"
   echo -e "\n${RED}应用启动失败，请查看日志：$APP_LOG_FILE${NC}"
   exit 1
 fi
 
-# 步骤11：配置开机自启（不依赖systemd）
+# 步骤10：配置开机自启（不依赖systemd）
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "配置开机自启..."
 log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置开机自启"
@@ -388,20 +335,19 @@ esac
 exit 0
 EOF
 
-# 赋予执行权限
-chmod +x $START_SCRIPT
+execute_command "chmod +x $START_SCRIPT" "赋予启动脚本执行权限"
 
 # 添加到系统服务
 if command -v update-rc.d &> /dev/null; then
-  update-rc.d fixture-monitoring defaults
+  execute_command "update-rc.d fixture-monitoring defaults" "添加到系统服务（update-rc.d）"
 elif command -v chkconfig &> /dev/null; then
-  chkconfig --add fixture-monitoring
-  chkconfig fixture-monitoring on
+  execute_command "chkconfig --add fixture-monitoring" "添加到系统服务（chkconfig）"
+  execute_command "chkconfig fixture-monitoring on" "设置开机自启（chkconfig）"
 else
   log "WARN" "无法配置开机自启，请手动添加到 rc.local 或等效文件"
 fi
 
-# 步骤12：部署完成
+# 步骤11：部署完成
 echo -e "\n\n${GREEN}=====================================${NC}"
 echo -e "${GREEN}       $APP_NAME 部署成功!       ${NC}"
 echo -e "${GREEN}=====================================${NC}"
