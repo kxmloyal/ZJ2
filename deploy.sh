@@ -95,15 +95,27 @@ stop_app() {
   fi
 }
 
-# 执行命令并记录日志
-execute_command() {
-  local command=$1
-  local message=$2
-  log "INFO" "$message: $command"
-  if ! eval "$command"; then
-    log "ERROR" "$message 失败"
-    exit 1
-  fi
+# 下载文件并添加重试机制
+download_file() {
+  local url=$1
+  local file=$2
+  local max_attempts=3
+  local attempt=0
+
+  while [ $attempt -lt $max_attempts ]; do
+    log "INFO" "尝试下载 $file（第 $((attempt + 1)) 次）..."
+    wget -q $url -O $file
+    if [ $? -eq 0 ]; then
+      log "INFO" "$file 下载成功"
+      return 0
+    else
+      log "WARN" "$file 下载失败，尝试重新下载..."
+      attempt=$((attempt + 1))
+    fi
+  done
+
+  log "ERROR" "多次尝试下载 $file 均失败，请检查网络连接"
+  return 1
 }
 
 # 初始化日志文件
@@ -134,64 +146,81 @@ fi
 # 步骤1：系统初始化
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "系统初始化..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 系统初始化"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 系统初始化 开始"
 
 # 安装必要系统工具
+log "INFO" "安装基础系统工具..."
 if command -v yum &> /dev/null; then
-  execute_command "yum install -y curl wget git tar gcc-c++ make" "安装基础系统工具（yum）"
+  yum install -y curl wget git tar gcc-c++ make
 else
-  execute_command "apt install -y curl wget git tar build-essential" "安装基础系统工具（apt）"
+  apt install -y curl wget git tar build-essential
 fi
+
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 系统初始化 完成"
 
 # 步骤2：安装Node.js和npm（修复依赖问题）
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "安装Node.js $NODE_VERSION..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 安装Node.js $NODE_VERSION"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 安装Node.js $NODE_VERSION 开始"
 
 # 移除可能存在的旧版本
-if command -v yum &> /dev/null; then
-  execute_command "yum remove -y nodejs npm" "移除旧版本Node.js和npm（yum）"
-else
-  execute_command "apt remove -y nodejs npm" "移除旧版本Node.js和npm（apt）"
-fi
+yum remove -y nodejs npm || apt remove -y nodejs npm
 
 # 手动安装Node.js 16 LTS（解决GLIBC依赖问题）
-execute_command "mkdir -p /opt/nodejs && cd /opt/nodejs" "创建Node.js安装目录"
-NODE_VERSION=$(curl -s https://nodejs.org/dist/latest-v16.x/ | grep -o 'node-v16\.[0-9]*\.[0-9]*-linux-x64.tar.xz' | head -1)
-execute_command "wget -q https://nodejs.org/dist/latest-v16.x/$NODE_VERSION" "下载Node.js $NODE_VERSION"
-execute_command "tar -xJf $NODE_VERSION" "解压Node.js $NODE_VERSION"
-execute_command "rm $NODE_VERSION" "删除Node.js压缩包"
-execute_command "ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/node /usr/bin/node" "创建Node.js软链接"
-execute_command "ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/npm /usr/bin/npm" "创建npm软链接"
-execute_command "ln -sf /opt/nodejs/${NODE_VERSION%.tar.xz}/bin/npx /usr/bin/npx" "创建npx软链接"
+mkdir -p /opt/nodejs && cd /opt/nodejs
+NODE_VERSION_FILE=$(curl -s https://nodejs.org/dist/latest-v16.x/ | grep -o 'node-v16\.[0-9]*\.[0-9]*-linux-x64.tar.xz' | head -1)
+download_file "https://nodejs.org/dist/latest-v16.x/$NODE_VERSION_FILE" "$NODE_VERSION_FILE"
+if [ $? -ne 0 ]; then
+  log "ERROR" "Node.js 安装包下载失败，部署终止"
+  exit 1
+fi
+
+if ! tar -xJf $NODE_VERSION_FILE; then
+  log "ERROR" "解压缩 Node.js 安装包失败，请检查文件完整性"
+  rm -f $NODE_VERSION_FILE
+  exit 1
+fi
+rm $NODE_VERSION_FILE
+ln -sf /opt/nodejs/${NODE_VERSION_FILE%.tar.xz}/bin/node /usr/bin/node
+ln -sf /opt/nodejs/${NODE_VERSION_FILE%.tar.xz}/bin/npm /usr/bin/npm
+ln -sf /opt/nodejs/${NODE_VERSION_FILE%.tar.xz}/bin/npx /usr/bin/npx
 
 # 验证Node.js安装
 log "INFO" "Node.js版本: $(node -v)"
 log "INFO" "npm版本: $(npm -v)"
 
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 安装Node.js $NODE_VERSION 完成"
+
 # 步骤3：创建部署目录
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "创建部署目录..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 创建部署目录"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 创建部署目录 开始"
 
-execute_command "mkdir -p $DEPLOY_DIR" "创建部署目录"
-execute_command "chmod -R 755 $DEPLOY_DIR" "设置部署目录权限"
-execute_command "chown -R $USER:$USER $DEPLOY_DIR 2>/dev/null || true" "设置部署目录所有者"
+mkdir -p $DEPLOY_DIR
+chmod -R 755 $DEPLOY_DIR
+chown -R $USER:$USER $DEPLOY_DIR 2>/dev/null || true
+
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 创建部署目录 完成"
 
 # 步骤4：复制应用文件
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "复制应用文件..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 复制应用文件"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 复制应用文件 开始"
 
-execute_command "cp -r $APP_DIR/* $DEPLOY_DIR/" "复制应用文件"
-execute_command "mkdir -p $DEPLOY_DIR/public" "创建public目录"
-execute_command "mkdir -p $DEPLOY_DIR/data" "创建data目录"
-execute_command "mkdir -p $DEPLOY_DIR/src" "创建src目录"
+# 复制应用文件
+cp -r $APP_DIR/* $DEPLOY_DIR/
+
+# 确保必要目录存在
+mkdir -p $DEPLOY_DIR/public
+mkdir -p $DEPLOY_DIR/data
+mkdir -p $DEPLOY_DIR/src
+
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 复制应用文件 完成"
 
 # 步骤5：配置package.json
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "配置package.json..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置package.json"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置package.json 开始"
 
 # 写入正确的package.json
 cat > "$DEPLOY_DIR/package.json" << EOF
@@ -218,19 +247,25 @@ cat > "$DEPLOY_DIR/package.json" << EOF
 }
 EOF
 
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置package.json 完成"
+
 # 步骤6：安装应用依赖
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "安装应用依赖..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 安装应用依赖"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 安装应用依赖 开始"
 
-execute_command "npm cache clean --force" "清除npm缓存"
-execute_command "cd $DEPLOY_DIR" "进入部署目录"
-execute_command "npm install --production" "安装应用依赖"
+# 清除npm缓存
+npm cache clean --force
+
+cd $DEPLOY_DIR
+npm install --production
+
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 安装应用依赖 完成"
 
 # 步骤7：配置环境变量
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "配置环境变量..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置环境变量"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置环境变量 开始"
 
 # 创建环境变量配置文件
 cat > "$DEPLOY_DIR/.env" << EOF
@@ -240,28 +275,30 @@ DATA_DIR=$DEPLOY_DIR/data
 LOG_DIR=$DEPLOY_DIR/logs
 EOF
 
-execute_command "mkdir -p $DEPLOY_DIR/logs" "创建日志目录"
-execute_command "touch $APP_LOG_FILE" "创建应用日志文件"
-execute_command "chmod 666 $APP_LOG_FILE" "设置应用日志文件权限"
+# 创建日志目录
+mkdir -p $DEPLOY_DIR/logs
+touch $APP_LOG_FILE
+chmod 666 $APP_LOG_FILE
+
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置环境变量 完成"
 
 # 步骤8：停止现有应用
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "停止现有应用..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 停止现有应用"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 停止现有应用 开始"
 
-if ! stop_app; then
-  log "ERROR" "停止现有应用失败，部署终止"
-  exit 1
-fi
+stop_app
+
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 停止现有应用 完成"
 
 # 步骤9：启动应用服务（纯后台运行）
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "启动应用服务..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 启动应用服务"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 启动应用服务 开始"
 
 # 启动应用
-execute_command "cd $DEPLOY_DIR" "进入部署目录"
-execute_command "echo '启动应用...' > $APP_LOG_FILE" "写入启动信息到应用日志文件"
+cd $DEPLOY_DIR
+echo "启动应用..." > $APP_LOG_FILE
 nohup node src/server.js > $APP_LOG_FILE 2>&1 &
 echo $! > $PID_FILE
 
@@ -276,10 +313,12 @@ else
   exit 1
 fi
 
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 启动应用服务 完成"
+
 # 步骤10：配置开机自启（不依赖systemd）
 current_step=$((current_step + 1))
 show_progress $current_step $TOTAL_STEPS "配置开机自启..."
-log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置开机自启"
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置开机自启 开始"
 
 # 创建启动脚本
 START_SCRIPT="/etc/init.d/fixture-monitoring"
@@ -335,17 +374,20 @@ esac
 exit 0
 EOF
 
-execute_command "chmod +x $START_SCRIPT" "赋予启动脚本执行权限"
+# 赋予执行权限
+chmod +x $START_SCRIPT
 
 # 添加到系统服务
 if command -v update-rc.d &> /dev/null; then
-  execute_command "update-rc.d fixture-monitoring defaults" "添加到系统服务（update-rc.d）"
+  update-rc.d fixture-monitoring defaults
 elif command -v chkconfig &> /dev/null; then
-  execute_command "chkconfig --add fixture-monitoring" "添加到系统服务（chkconfig）"
-  execute_command "chkconfig fixture-monitoring on" "设置开机自启（chkconfig）"
+  chkconfig --add fixture-monitoring
+  chkconfig fixture-monitoring on
 else
   log "WARN" "无法配置开机自启，请手动添加到 rc.local 或等效文件"
 fi
+
+log "INFO" "步骤 $current_step/$TOTAL_STEPS: 配置开机自启 完成"
 
 # 步骤11：部署完成
 echo -e "\n\n${GREEN}=====================================${NC}"
