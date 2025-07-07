@@ -1,0 +1,29 @@
+{
+  "db": {
+    "type": "json",
+    "json": {
+      "filePath": "./data/fixtures.json"
+    },
+    "mysql": {
+      "host": "localhost",
+      "port": 3306,
+      "user": "root",
+      "password": "",
+      "database": "fixture_monitoring"
+    }
+  },
+  "server": {
+    "port": 3000,
+    "cors": {
+      "origin": "*"
+    }
+  },
+  "logging": {
+    "level": "info",
+    "file": "./logs/app.log"
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 3600
+  }
+}
