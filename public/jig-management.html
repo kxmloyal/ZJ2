@@ -8,7 +8,7 @@
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
   
-  <!-- 引入公共 Tailwind 配置和样式 -->
+  <!-- 引入公共配置和样式 -->
   <script src="common.js"></script>
   <link rel="stylesheet" href="common.css">
 </head>
@@ -95,6 +95,22 @@
       </div>
     </header>
 
+    <!-- 通知提示 -->
+    <div id="notification" class="hidden fixed top-20 right-4 z-50 max-w-sm w-full bg-white shadow-lg rounded-lg overflow-hidden transform transition-all duration-300 ease-in-out">
+      <div class="p-4 flex items-start">
+        <div id="notificationIcon" class="flex-shrink-0 text-success">
+          <i class="fa fa-check-circle text-xl"></i>
+        </div>
+        <div class="ml-3 w-0 flex-1 pt-0.5">
+          <p id="notificationTitle" class="text-sm font-medium text-gray-900">操作成功</p>
+          <p id="notificationMessage" class="mt-1 text-sm text-gray-500">治具已成功添加</p>
+        </div>
+        <button id="closeNotification" class="ml-4 flex-shrink-0 flex">
+          <i class="fa fa-times text-gray-400 hover:text-gray-500"></i>
+        </button>
+      </div>
+    </div>
+
     <!-- 内容区域 -->
     <main class="container mx-auto px-4 py-6">
       <!-- 操作栏 -->
@@ -117,12 +133,39 @@
                 <option value="maintenance">维护中</option>
               </select>
             </div>
+
+            <div class="flex items-center">
+              <label for="fixtureTypeFilter" class="block text-sm font-medium text-gray-700 mr-2">类型:</label>
+              <select id="fixtureTypeFilter" class="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white">
+                <option value="all">全部类型</option>
+                <!-- 类型选项将通过JS动态填充 -->
+              </select>
+            </div>
           </div>
           
           <div class="flex space-x-3">
-            <button id="importFixturesBtn" class="btn btn-secondary">
+            <div class="relative">
+              <button id="batchOperationsBtn" class="btn btn-secondary">
+                <i class="fa fa-cog mr-2"></i> 批量操作
+                <i class="fa fa-chevron-down ml-2 text-xs"></i>
+              </button>
+              <div id="batchOperationsMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
+                <button id="batchDeleteBtn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i class="fa fa-trash mr-2"></i> 批量删除
+                </button>
+                <button id="batchExportBtn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i class="fa fa-download mr-2"></i> 批量导出
+                </button>
+                <div class="border-t border-gray-100 my-1"></div>
+                <button id="batchMaintenanceBtn" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <i class="fa fa-wrench mr-2"></i> 标记为维护中
+                </button>
+              </div>
+            </div>
+            <label for="importFile" class="btn btn-secondary cursor-pointer">
               <i class="fa fa-upload mr-2"></i> 导入
-            </button>
+            </label>
+            <input type="file" id="importFile" accept=".json" class="hidden">
             <button id="exportFixturesBtn" class="btn btn-secondary">
               <i class="fa fa-download mr-2"></i> 导出
             </button>
@@ -139,6 +182,9 @@
           <table class="table">
             <thead class="bg-gray-50">
               <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                  <input type="checkbox" id="selectAllFixtures" class="rounded text-primary focus:ring-primary">
+                </th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">治具编号</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">固定产能(件/月)</th>
@@ -152,7 +198,7 @@
             <tbody id="fixturesTableBody" class="bg-white divide-y divide-gray-200">
               <!-- 表格内容将通过JavaScript动态生成 -->
               <tr class="text-center">
-                <td colspan="8" class="px-6 py-10 text-gray-500">
+                <td colspan="9" class="px-6 py-10 text-gray-500">
                   <i class="fa fa-spinner fa-spin text-xl mb-2"></i>
                   <p>正在加载数据...</p>
                 </td>
@@ -166,25 +212,24 @@
           <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p class="text-sm text-gray-700">
-                显示第 <span class="font-medium">1</span> 到 <span class="font-medium">8</span> 条，共 <span class="font-medium" id="fixturesCount">0</span> 条结果
+                显示第 <span class="font-medium" id="currentPageText">1</span> 到 <span class="font-medium" id="endPageText">8</span> 条，共 <span class="font-medium" id="fixturesCount">0</span> 条结果
               </p>
             </div>
             <div>
               <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <button id="prevPageBtn" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                   <span class="sr-only">上一页</span>
                   <i class="fa fa-chevron-left text-xs"></i>
-                </a>
-                <a href="#" aria-current="page" class="z-10 bg-primary text-white relative inline-flex items-center px-4 py-2 border border-primary text-sm font-medium">
-                  1
-                </a>
-                <a href="#" class="bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium">
-                  2
-                </a>
-                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                </button>
+                <div id="paginationNumbers" class="flex">
+                  <button class="z-10 bg-primary text-white relative inline-flex items-center px-4 py-2 border border-primary text-sm font-medium pagination-number active" data-page="1">
+                    1
+                  </button>
+                </div>
+                <button id="nextPageBtn" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                   <span class="sr-only">下一页</span>
                   <i class="fa fa-chevron-right text-xs"></i>
-                </a>
+                </button>
               </nav>
             </div>
           </div>
@@ -224,23 +269,24 @@
       <form id="addFixtureForm" class="modal-body">
         <div class="space-y-4">
           <div>
-            <label for="fixtureId" class="block text-sm font-medium text-gray-700 mb-1">治具编号</label>
+            <label for="fixtureId" class="block text-sm font-medium text-gray-700 mb-1">治具编号 <span class="text-danger">*</span></label>
             <input type="text" id="fixtureId" name="fixtureId" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：F-001" required>
+            <p class="mt-1 text-xs text-gray-500">请输入唯一的治具编号</p>
           </div>
           
           <div>
-            <label for="fixtureType" class="block text-sm font-medium text-gray-700 mb-1">治具类型</label>
+            <label for="fixtureType" class="block text-sm font-medium text-gray-700 mb-1">治具类型 <span class="text-danger">*</span></label>
             <input type="text" id="fixtureType" name="fixtureType" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：测试治具" required>
           </div>
           
           <div>
-            <label for="fixtureCapacity" class="block text-sm font-medium text-gray-700 mb-1">固定产能(件/月)</label>
-            <input type="number" id="fixtureCapacity" name="fixtureCapacity" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1200" required>
+            <label for="fixtureCapacity" class="block text-sm font-medium text-gray-700 mb-1">固定产能(件/月) <span class="text-danger">*</span></label>
+            <input type="number" id="fixtureCapacity" name="fixtureCapacity" min="1" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1200" required>
           </div>
           
           <div>
-            <label for="fixtureSchedule" class="block text-sm font-medium text-gray-700 mb-1">当前排程(件)</label>
-            <input type="number" id="fixtureSchedule" name="fixtureSchedule" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1000" required>
+            <label for="fixtureSchedule" class="block text-sm font-medium text-gray-700 mb-1">当前排程(件) <span class="text-danger">*</span></label>
+            <input type="number" id="fixtureSchedule" name="fixtureSchedule" min="0" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1000" required>
           </div>
           
           <div>
@@ -249,18 +295,194 @@
           </div>
           
           <div>
-            <label for="fixtureStatus" class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <label for="fixtureStatus" class="block text-sm font-medium text-gray-700 mb-1">状态 <span class="text-danger">*</span></label>
             <select id="fixtureStatus" name="fixtureStatus" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white">
               <option value="normal">正常</option>
               <option value="overloaded">超载</option>
               <option value="maintenance">维护中</option>
             </select>
           </div>
+
+          <div>
+            <label for="fixtureDescription" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+            <textarea id="fixtureDescription" name="fixtureDescription" rows="3" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入治具的详细描述信息"></textarea>
+          </div>
         </div>
       </form>
       <div class="modal-footer">
         <button id="cancelAddFixture" class="btn btn-secondary">取消</button>
         <button type="submit" form="addFixtureForm" class="btn btn-primary">保存治具</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑治具模态框 -->
+  <div id="editFixtureModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto fade-in">
+      <div class="modal-header">
+        <h3 class="text-lg font-semibold">编辑治具</h3>
+        <button id="closeEditModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      <form id="editFixtureForm" class="modal-body">
+        <input type="hidden" id="editFixtureId" name="editFixtureId">
+        <div class="space-y-4">
+          <div>
+            <label for="editFixtureIdDisplay" class="block text-sm font-medium text-gray-700 mb-1">治具编号</label>
+            <input type="text" id="editFixtureIdDisplay" class="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50" readonly>
+          </div>
+          
+          <div>
+            <label for="editFixtureType" class="block text-sm font-medium text-gray-700 mb-1">治具类型 <span class="text-danger">*</span></label>
+            <input type="text" id="editFixtureType" name="editFixtureType" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：测试治具" required>
+          </div>
+          
+          <div>
+            <label for="editFixtureCapacity" class="block text-sm font-medium text-gray-700 mb-1">固定产能(件/月) <span class="text-danger">*</span></label>
+            <input type="number" id="editFixtureCapacity" name="editFixtureCapacity" min="1" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1200" required>
+          </div>
+          
+          <div>
+            <label for="editFixtureSchedule" class="block text-sm font-medium text-gray-700 mb-1">当前排程(件) <span class="text-danger">*</span></label>
+            <input type="number" id="editFixtureSchedule" name="editFixtureSchedule" min="0" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：1000" required>
+          </div>
+          
+          <div>
+            <label for="editFixtureLocation" class="block text-sm font-medium text-gray-700 mb-1">存放位置</label>
+            <input type="text" id="editFixtureLocation" name="editFixtureLocation" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="例如：A车间">
+          </div>
+          
+          <div>
+            <label for="editFixtureStatus" class="block text-sm font-medium text-gray-700 mb-1">状态 <span class="text-danger">*</span></label>
+            <select id="editFixtureStatus" name="editFixtureStatus" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white">
+              <option value="normal">正常</option>
+              <option value="overloaded">超载</option>
+              <option value="maintenance">维护中</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="editFixtureDescription" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+            <textarea id="editFixtureDescription" name="editFixtureDescription" rows="3" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入治具的详细描述信息"></textarea>
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button id="cancelEditFixture" class="btn btn-secondary">取消</button>
+        <button type="submit" form="editFixtureForm" class="btn btn-primary">更新治具</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 确认删除模态框 -->
+  <div id="deleteConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden fade-in">
+      <div class="p-6">
+        <div class="flex justify-center mb-4">
+          <div class="w-16 h-16 rounded-full bg-danger/10 flex items-center justify-center">
+            <i class="fa fa-trash text-danger text-2xl"></i>
+          </div>
+        </div>
+        <h3 class="text-xl font-semibold text-center mb-2">确认删除</h3>
+        <p class="text-gray-500 text-center mb-6" id="deleteConfirmMessage">
+          您确定要删除这个治具吗？此操作无法撤销。
+        </p>
+        <input type="hidden" id="deleteFixtureId">
+        <div class="flex space-x-3">
+          <button id="cancelDelete" class="btn btn-secondary flex-1">取消</button>
+          <button id="confirmDelete" class="btn btn-danger flex-1">确认删除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入治具模态框 -->
+  <div id="importConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto fade-in">
+      <div class="modal-header">
+        <h3 class="text-lg font-semibold">导入治具数据</h3>
+        <button id="closeImportModal" class="text-gray-400 hover:text-gray-600">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-6">
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors duration-200">
+            <input type="file" id="importJsonFile" accept=".json" class="hidden">
+            <label for="importJsonFile" class="cursor-pointer">
+              <i class="fa fa-cloud-upload text-3xl text-gray-400 mb-3"></i>
+              <p class="text-sm font-medium text-gray-700">点击或拖拽JSON文件到此处</p>
+              <p class="text-xs text-gray-500 mt-1">支持的格式: .json</p>
+            </label>
+          </div>
+          <div id="importFileInfo" class="hidden mt-4 p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center">
+              <i class="fa fa-file-text-o text-primary mr-3"></i>
+              <div class="flex-1">
+                <p id="importFileName" class="text-sm font-medium text-gray-900 truncate"></p>
+                <p class="text-xs text-gray-500">文件大小: <span id="importFileSize"></span></p>
+              </div>
+              <button id="removeImportFile" class="text-gray-400 hover:text-gray-600">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-3">导入选项</h4>
+          <div class="space-y-3">
+            <div class="flex items-center">
+              <input id="importReplace" name="importMode" type="radio" value="replace" class="h-4 w-4 text-primary focus:ring-primary border-gray-300">
+              <label for="importReplace" class="ml-3 block text-sm text-gray-700">
+                替换现有数据
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input id="importMerge" name="importMode" type="radio" value="merge" checked class="h-4 w-4 text-primary focus:ring-primary border-gray-300">
+              <label for="importMerge" class="ml-3 block text-sm text-gray-700">
+                合并数据（存在相同ID则更新）
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input id="importIgnore" name="importMode" type="radio" value="ignore" class="h-4 w-4 text-primary focus:ring-primary border-gray-300">
+              <label for="importIgnore" class="ml-3 block text-sm text-gray-700">
+                忽略已有数据（存在相同ID则跳过）
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">数据格式示例</h4>
+          <pre class="text-xs text-gray-600 bg-gray-100 p-3 rounded overflow-x-auto text-left">
+[
+  {
+    "id": "F-001",
+    "type": "测试治具",
+    "capacity": 1200,
+    "schedule": 1100,
+    "location": "A车间",
+    "status": "normal",
+    "description": "用于电子产品测试"
+  },
+  {
+    "id": "F-002",
+    "type": "冲压治具",
+    "capacity": 800,
+    "schedule": 650,
+    "location": "B车间",
+    "status": "normal",
+    "description": "用于金属冲压"
+  }
+]
+          </pre>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelImport" class="btn btn-secondary">取消</button>
+        <button id="confirmImport" class="btn btn-primary" disabled>开始导入</button>
       </div>
     </div>
   </div>
@@ -293,8 +515,8 @@
         }
       });
       
-      // 加载治具列表
-      loadFixturesList();
+      // 初始化治具管理功能
+      initJigManagement();
     });
   </script>
 </body>
